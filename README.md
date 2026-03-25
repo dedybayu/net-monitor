@@ -30,7 +30,7 @@ Sistem ini bekerja dengan memisahkan proses pengecekan dari proses penampilan da
 
 1.  **Clone repositori:**
     ```bash
-    git clone [https://github.com/dedybayu/net-monitor.git](https://github.com/dedybayu/net-monitor.git)
+    git clone https://github.com/dedybayu/net-monitor.git
     cd net-monitor
     ```
 
