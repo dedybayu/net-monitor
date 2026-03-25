@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌐 NetMonitor: Hybrid Network Monitoring System
 
-## Getting Started
+NetMonitor adalah sistem monitoring perangkat jaringan berbasis web yang dibangun dengan **Next.js**. Sistem ini menggunakan metode **Hybrid Monitoring** (ICMP Ping & TCP Port Scanning) dengan arsitektur **Background Worker** yang efisien untuk memantau ketersediaan perangkat secara real-time tanpa membebani server.
 
-First, run the development server:
+## ✨ Fitur Utama
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+* **Hybrid Check:** Mendukung pengecekan via ICMP (Ping) dan spesifik TCP Port (untuk perangkat yang memblokir ICMP).
+* **High Efficiency:** Menggunakan *Background Worker* dan *Global Cache* sehingga ribuan request dari user tidak membebani performa jaringan server.
+* **Real-time Dashboard:** Tampilan modern dengan mode gelap (Dark Mode) menggunakan Tailwind CSS dan update otomatis via **SWR**.
+* **Interactive Topology:** Visualisasi peta jaringan menggunakan **React Flow** yang dapat digeser (drag-and-drop) dan posisinya tersimpan di browser.
+* **High Precision Latency:** Pengukuran waktu respon menggunakan `process.hrtime()` untuk akurasi hingga sub-milidetik.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏗️ Arsitektur Sistem
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sistem ini bekerja dengan memisahkan proses pengecekan dari proses penampilan data:
+1.  **Worker (Server-side):** Berjalan di latar belakang setiap 10 detik untuk memperbarui status IP.
+2.  **Cache:** Hasil pengecekan disimpan dalam `Map` global di memori server.
+3.  **API Route:** Menyediakan data dari cache secara instan kepada klien.
+4.  **Client (SWR):** Melakukan polling ke API setiap 5 detik hanya saat tab browser aktif.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Teknologi yang Digunakan
 
-## Learn More
+* **Framework:** [Next.js 14+](https://nextjs.org/) (App Router)
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Monitoring:** [Node.js Net Module](https://nodejs.org/api/net.html) & [Ping](https://www.npmjs.com/package/ping)
+* **Data Fetching:** [SWR](https://swr.vercel.app/)
+* **Topology UI:** [React Flow](https://reactflow.dev/)
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Cara Instalasi
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1.  **Clone repositori:**
+    ```bash
+    git clone [https://github.com/dedybayu/net-monitor.git](https://github.com/dedybayu/net-monitor.git)
+    cd net-monitor
+    ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2.  **Instal dependensi:**
+    ```bash
+    npm install
+    ```
 
-## Deploy on Vercel
+3.  **Jalankan aplikasi dalam mode pengembangan:**
+    ```bash
+    npm run dev
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4.  **Buka di browser:**
+    Akses `http://localhost:3000` untuk Dashboard atau `http://localhost:3000/topology` untuk Peta Jaringan.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
