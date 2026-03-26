@@ -25,8 +25,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MonitorPage() {
   // Di dalam function MonitorPage()
-const targetIP = "172.16.10.1";
-const targetPort = "5678";
+const targetIP = "10.10.168.6";
+const targetPort = "3000";
 
   const [countdown, setCountdown] = useState(5);
 
