@@ -37,7 +37,7 @@ const nodeTypes = { monitor: MonitorNode };
 //Initial Nodes & Edges TODO: Dari Database/API
 const getInitialNodes = (): Node[] => [
   {
-    id: '1', type: 'monitor', position: { x: 100, y: 100 },
+    id: '1', type: 'monitor', position: { x: 300, y: 100 },
     data: { label: 'Gateway', target: '172.16.10.30', method: 'ICMP', status: 'offline', latency: '...' }
   },
   {
@@ -45,7 +45,7 @@ const getInitialNodes = (): Node[] => [
     data: { label: 'Web Server 1', target: '172.16.10.1', method: 'ICMP', status: 'offline', latency: '...' }
   },
   {
-    id: '3', type: 'monitor', position: { x: 100, y: 500 },
+    id: '3', type: 'monitor', position: { x: 500, y: 300 },
     data: { label: 'Web Server 2', target: '10.10.168.6:3001', method: 'TCP', status: 'offline', latency: '...' }
   },
 ];
