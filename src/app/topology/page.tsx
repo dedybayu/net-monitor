@@ -17,29 +17,105 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
 import { MonitorNode } from './MonitorNode';
+// import { get } from 'http';
 
-const STORAGE_KEY = 'net-monitor-topology-v4';
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const STORAGE_KEY = 'net-monitor-topology-v5';
+const fetcher = async (url: string, targets: any[]) => {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ targets }),
+  });
+  return res.json();
+};
 
 // Mapping tipe node
 const nodeTypes = { monitor: MonitorNode };
+
+
+
+//Initial Nodes & Edges TODO: Dari Database/API
+const getInitialNodes = (): Node[] => [
+  {
+    id: '1', type: 'monitor', position: { x: 100, y: 100 },
+    data: { label: 'Gateway', target: '172.16.10.30', method: 'ICMP', status: 'offline', latency: '...' }
+  },
+  {
+    id: '2', type: 'monitor', position: { x: 100, y: 300 },
+    data: { label: 'Web Server 1', target: '172.16.10.1', method: 'ICMP', status: 'offline', latency: '...' }
+  },
+  {
+    id: '3', type: 'monitor', position: { x: 100, y: 500 },
+    data: { label: 'Web Server 2', target: '10.10.168.6:3001', method: 'TCP', status: 'offline', latency: '...' }
+  },
+];
+
+const getInitialEdges = (): Edge[] => [
+  {
+    id: 'e1-2',
+    source: '1',
+    target: '2',
+    animated: true,
+    style: { stroke: '#3b82f6' }
+  },
+  {
+    id: 'e1-3',
+    source: '1',
+    target: '3',
+    animated: true,
+    style: { stroke: '#3b82f6' }
+  },
+];
+
+
+// Struktur satu buah node dari respon API
+interface ApiNodeStatus {
+  target: string;
+  status: 'online' | 'offline';
+  latency: string;
+  method?: string;
+}
+
+// Struktur lengkap respon dari API /api/status
+interface StatusApiResponse {
+  nodes: ApiNodeStatus[];
+  timestamp?: string;
+}
 
 function TopologyEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Fetch data dari API (Identik dengan Dashboard)
-  const { data: apiData } = useSWR('/api/status?ip=10.10.168.6&port=3000', fetcher, {
-    refreshInterval: 5000,
-  });
+  // 1. Tambahkan generic type pada useSWR
+  // 1. Siapkan payload target dari nodes yang ada di canvas
+  const targetPayload = useMemo(() => {
+    return nodes.map((node) => {
+      const targetStr = node.data.target;
+      if (targetStr.includes(':')) {
+        const [ip, port] = targetStr.split(':');
+        return { ip, port: parseInt(port) };
+      }
+      return { ip: targetStr, port: 0 }; // 0 untuk ICMP/Ping
+    });
+  }, [nodes]);
 
-  // 1. Sinkronisasi Data API ke dalam Nodes
+  // 2. Gunakan useSWR dengan targetPayload sebagai bagian dari key
+  // SWR akan auto-revalidate jika targetPayload berubah
+  const { data: apiData } = useSWR<StatusApiResponse>(
+    targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
+    ([url, payload]: [string, any[]]) => fetcher(url, payload),
+    { refreshInterval: 5000 }
+  );
+
+  // 2. Sinkronisasi Data API ke dalam Nodes
   useEffect(() => {
     if (apiData?.nodes) {
       setNodes((nds) =>
         nds.map((node) => {
-          // Cari data terbaru dari API berdasarkan target IP/Port
-          const latestStatus = apiData.nodes.find((n: any) => n.target === node.data.target);
+          // 'n' sekarang otomatis bertipe ApiNodeStatus, bukan any lagi
+          const latestStatus = apiData.nodes.find((n) => n.target === node.data.target);
+
           if (latestStatus) {
             return {
               ...node,
@@ -55,43 +131,25 @@ function TopologyEditor() {
       );
     }
   }, [apiData, setNodes]);
-
   // 2. Load Initial State & Storage
   useEffect(() => {
+
+    // Coba load dari localStorage terlebih dahulu
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const { nodes: sn, edges: se } = JSON.parse(saved);
-        setNodes(sn);
-        setEdges(se);
+        // const { nodes: sn, edges: se } = JSON.parse(saved);
+        // setNodes(sn);
+        // setEdges(se);
+
+        setNodes(getInitialNodes());
+        setEdges(getInitialEdges());
       } catch (e) { console.error(e); }
     } else {
-  // Default nodes jika storage kosong
-  const initialNodes = [
-    { 
-      id: '1', type: 'monitor', position: { x: 100, y: 100 }, 
-      data: { label: 'Gateway', target: '10.10.168.6', method: 'ICMP', status: 'offline', latency: '...' } 
-    },
-    { 
-      id: '2', type: 'monitor', position: { x: 100, y: 300 }, 
-      data: { label: 'Web Server', target: '10.10.168.6:3000', method: 'TCP', status: 'offline', latency: '...' } 
-    },
-  ];
 
-  // Menambahkan koneksi (garis) dari Node 1 ke Node 2
-  const initialEdges = [
-    { 
-      id: 'e1-2', 
-      source: '1', 
-      target: '2', 
-      animated: true, 
-      style: { stroke: '#3b82f6' } // Opsional: Warna biru (Tailwind primary)
+      setNodes(getInitialNodes());
+      setEdges(getInitialEdges());
     }
-  ];
-
-  setNodes(initialNodes);
-  setEdges(initialEdges);
-}
   }, [setNodes, setEdges]);
 
   const onSave = useCallback(() => {
@@ -113,8 +171,8 @@ function TopologyEditor() {
           <div className="flex flex-col">
             <h1 className="text-md font-black tracking-tight leading-none">NETWORK TOPOLOGY</h1>
             <div className="flex items-center gap-2 mt-1">
-               <span className="badge badge-success badge-xs animate-pulse"></span>
-               <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">Live Monitoring Active</span>
+              <span className="badge badge-success badge-xs animate-pulse"></span>
+              <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">Live Monitoring Active</span>
             </div>
           </div>
         </div>
@@ -141,11 +199,11 @@ function TopologyEditor() {
 
         {/* SYNC INDICATOR (DaisyUI) */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xl">
-           <div className="radial-progress text-primary text-[10px]" style={{ "--value": "70", "--size": "2rem" } as any}>SWR</div>
-           <div className="flex flex-col">
-              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Server Sync</span>
-              <span className="text-xs font-black font-mono">Real-time status</span>
-           </div>
+          <div className="radial-progress text-primary text-[10px]" style={{ "--value": "70", "--size": "2rem" } as any}>SWR</div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Server Sync</span>
+            <span className="text-xs font-black font-mono">Real-time status</span>
+          </div>
         </div>
       </div>
 

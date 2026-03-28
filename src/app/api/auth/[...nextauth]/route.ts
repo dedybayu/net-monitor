@@ -35,16 +35,27 @@ const handler = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
+      // 'user' sekarang sudah memiliki tipe 'role' dari definisi di atas
+      if (user) {
+        token.role = user.role;
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role;
+      // 'session.user' dan 'token' sekarang sudah mengenali 'role'
+      if (session.user) {
+        session.user.role = token.role;
+      }
       return session;
     }
   },
   pages: {
     signIn: "/login",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 60 * 60, // 1 jam
+    updateAge: 0, // Nonaktifkan refresh otomatis
   },
   secret: process.env.NEXTAUTH_SECRET,
 });
