@@ -1,19 +1,16 @@
-// lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
-const prismaClientSingleton = () => {
-  // Di Prisma 7, kita mempassing konfigurasi saat inisialisasi
-  return new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
-  });
-};
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-declare global {
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
-}
+const adapter = new PrismaPg(pool);
 
-const prisma = globalThis.prisma ?? prismaClientSingleton();
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export default prisma;
+export const prisma =
+  globalForPrisma.prisma || new PrismaClient({ adapter: adapter as any });
 
-if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

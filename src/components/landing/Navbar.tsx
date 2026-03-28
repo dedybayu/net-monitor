@@ -65,7 +65,7 @@ export default function Navbar() {
               </svg>
             </label>
             <Link href="/">
-              <span className="btn btn-ghost text-2xl font-extrabold">Gawean</span>
+              <span className="btn btn-ghost text-2xl font-extrabold">NetMonitor</span>
             </Link>
           </div>
 
@@ -89,7 +89,7 @@ export default function Navbar() {
             {!isLoginPage && (
               <Link href="/login">
                 <button className="btn btn-primary btn-sm font-semibold hidden sm:inline-flex">
-                  Mlebu
+                  Masuk
                 </button>
               </Link>
             )}

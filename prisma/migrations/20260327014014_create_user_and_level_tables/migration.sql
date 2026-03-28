@@ -1,8 +1,8 @@
 -- CreateTable
 CREATE TABLE "levels" (
     "level_id" SERIAL NOT NULL,
-    "level_name" VARCHAR(50) NOT NULL,
-    "level_code" VARCHAR(20) NOT NULL,
+    "level_name" TEXT NOT NULL,
+    "level_code" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -12,11 +12,11 @@ CREATE TABLE "levels" (
 -- CreateTable
 CREATE TABLE "users" (
     "user_id" SERIAL NOT NULL,
-    "name" VARCHAR(100) NOT NULL,
-    "email" VARCHAR(150) NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "level_id" INTEGER NOT NULL,
     "profile_picture" TEXT,
-    "level_id" INTEGER,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -30,4 +30,4 @@ CREATE UNIQUE INDEX "levels_level_code_key" ON "levels"("level_code");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "levels"("level_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "users" ADD CONSTRAINT "users_level_id_fkey" FOREIGN KEY ("level_id") REFERENCES "levels"("level_id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useMemo, useCallback, useEffect } from 'react';
+import useSWR from 'swr';
 import ReactFlow, {
   addEdge,
   Background,
@@ -15,125 +16,144 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
+import { MonitorNode } from './MonitorNode';
 
-// --- KONFIGURASI AWAL (Di luar komponen agar stabil) ---
-const initialNodes: Node[] = [
-  {
-    id: 'icmp-172.16.10.1',
-    type: 'default',
-    data: { label: '🌐 Ping Check (172.16.10.1)' },
-    position: { x: 250, y: 50 },
-    style: { background: '#10b981', color: '#fff', border: '1px solid #059669', borderRadius: '8px', padding: '10px' },
-  },
-  {
-    id: 'tcp-172.16.10.1-5678',
-    type: 'default',
-    data: { label: '🔌 Port 5678 (172.16.10.1)' },
-    position: { x: 250, y: 200 },
-    style: { background: '#8b5cf6', color: '#fff', border: '1px solid #7c3aed', borderRadius: '8px', padding: '10px' },
-  },
-];
+const STORAGE_KEY = 'net-monitor-topology-v4';
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const initialEdges: Edge[] = [
-  {
-    id: 'e-icmp-tcp',
-    source: 'icmp-172.16.10.1',
-    target: 'tcp-172.16.10.1-5678',
-    animated: true,
-    style: { stroke: '#64748b' },
-  },
-];
-
-const STORAGE_KEY = 'net-monitor-topology-v1';
+// Mapping tipe node
+const nodeTypes = { monitor: MonitorNode };
 
 function TopologyEditor() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // --- PERBAIKAN METODE 2: useMemo ---
-  // Kita definisikan nodeTypes & edgeTypes dengan useMemo agar warning hilang
-  const nodeTypes = useMemo(() => ({
-    // Jika nanti ada custom node, tambahkan di sini:
-    // monitor: CustomMonitorNode 
-  }), []);
+  // Fetch data dari API (Identik dengan Dashboard)
+  const { data: apiData } = useSWR('/api/status?ip=10.10.168.6&port=3000', fetcher, {
+    refreshInterval: 5000,
+  });
 
-  const edgeTypes = useMemo(() => ({}), []);
-
-  // 1. LOAD DATA
+  // 1. Sinkronisasi Data API ke dalam Nodes
   useEffect(() => {
-    const savedTopology = localStorage.getItem(STORAGE_KEY);
-    if (savedTopology) {
-      try {
-        const { nodes: savedNodes, edges: savedEdges } = JSON.parse(savedTopology);
-        if (savedNodes?.length > 0) setNodes(savedNodes);
-        if (savedEdges?.length > 0) setEdges(savedEdges);
-      } catch (e) {
-        console.error('Failed to parse saved topology', e);
-      }
+    if (apiData?.nodes) {
+      setNodes((nds) =>
+        nds.map((node) => {
+          // Cari data terbaru dari API berdasarkan target IP/Port
+          const latestStatus = apiData.nodes.find((n: any) => n.target === node.data.target);
+          if (latestStatus) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                status: latestStatus.status,
+                latency: latestStatus.latency,
+              },
+            };
+          }
+          return node;
+        })
+      );
     }
+  }, [apiData, setNodes]);
+
+  // 2. Load Initial State & Storage
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const { nodes: sn, edges: se } = JSON.parse(saved);
+        setNodes(sn);
+        setEdges(se);
+      } catch (e) { console.error(e); }
+    } else {
+  // Default nodes jika storage kosong
+  const initialNodes = [
+    { 
+      id: '1', type: 'monitor', position: { x: 100, y: 100 }, 
+      data: { label: 'Gateway', target: '10.10.168.6', method: 'ICMP', status: 'offline', latency: '...' } 
+    },
+    { 
+      id: '2', type: 'monitor', position: { x: 100, y: 300 }, 
+      data: { label: 'Web Server', target: '10.10.168.6:3000', method: 'TCP', status: 'offline', latency: '...' } 
+    },
+  ];
+
+  // Menambahkan koneksi (garis) dari Node 1 ke Node 2
+  const initialEdges = [
+    { 
+      id: 'e1-2', 
+      source: '1', 
+      target: '2', 
+      animated: true, 
+      style: { stroke: '#3b82f6' } // Opsional: Warna biru (Tailwind primary)
+    }
+  ];
+
+  setNodes(initialNodes);
+  setEdges(initialEdges);
+}
   }, [setNodes, setEdges]);
 
-  // 2. SAVE DATA
   const onSave = useCallback(() => {
-    const topologyToSave = { nodes, edges };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(topologyToSave));
-    alert('Posisi topologi berhasil disimpan!');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
+    alert('✅ Tata letak & konfigurasi topologi disimpan!');
   }, [nodes, edges]);
 
-  // 3. CONNECT DATA
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#64748b' } }, eds)),
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
     [setEdges]
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-950 text-gray-100 font-sans p-6 md:p-10">
-      <header className="flex items-center justify-between pb-6 border-b border-gray-800 mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-white">TOPOLOGY MAP</h1>
-          <p className="text-gray-400 mt-1 text-sm">Geser perangkat untuk mengatur tata letak jaringan Anda.</p>
+    <div className="flex flex-col h-screen bg-base-200">
+      {/* NAVBAR */}
+      <div className="navbar bg-base-100 border-b border-base-300 px-6 z-10 shadow-sm">
+        <div className="flex-1 gap-3">
+          {/* <div className="h-9 w-9 bg-primary rounded-xl flex items-center justify-center text-primary-content font-black shadow-lg shadow-primary/20">T</div> */}
+          <div className="flex flex-col">
+            <h1 className="text-md font-black tracking-tight leading-none">NETWORK TOPOLOGY</h1>
+            <div className="flex items-center gap-2 mt-1">
+               <span className="badge badge-success badge-xs animate-pulse"></span>
+               <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">Live Monitoring Active</span>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-sm text-gray-400 hover:text-white transition">
-            Kembali ke Dashboard
-          </Link>
-          <button 
-            onClick={onSave}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-all flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M7.707 10.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L5.586 11H3a1 1 0 110-2h2.586l-2.293-2.293a1 1 0 011.414-1.414l3 3zm9.586 0a1 1 0 01-1.414 0l-3-3a1 1 0 011.414-1.414L14.414 9H17a1 1 0 110 2h-2.586l2.293 2.293a1 1 0 01-1.414 1.414l-3-3z" />
-            </svg>
-            Simpan Posisi
-          </button>
+        <div className="flex-none gap-2">
+          <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
+          <button onClick={onSave} className="btn btn-primary btn-sm rounded-lg px-6 font-bold">Simpan</button>
         </div>
-      </header>
+      </div>
 
-      <div className="flex-grow bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl relative overflow-hidden" style={{ height: '70vh' }}>
+      {/* CANVAS */}
+      <div className="flex-grow relative overflow-hidden bg-base-300/50">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          nodeTypes={nodeTypes} // Menggunakan useMemo
-          edgeTypes={edgeTypes} // Menggunakan useMemo
+          nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           fitView
-          attributionPosition="bottom-right"
-          className="bg-gray-950"
         >
-          <Background color="#333" gap={25} size={1} />
-          <Controls className="bg-gray-800 border-gray-700 text-white rounded-lg" />
+          <Background color="#999" gap={30} size={1} />
+          <Controls className="bg-base-100 border-base-300 shadow-2xl rounded-2xl overflow-hidden" />
         </ReactFlow>
-        
-        <div className="absolute bottom-4 left-4 bg-gray-800/80 backdrop-blur-sm text-[10px] text-gray-500 px-3 py-1 rounded-full font-mono border border-gray-700">
-          Storage: LocalBrowser ({STORAGE_KEY})
+
+        {/* SYNC INDICATOR (DaisyUI) */}
+        <div className="absolute bottom-6 right-6 flex items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xl">
+           <div className="radial-progress text-primary text-[10px]" style={{ "--value": "70", "--size": "2rem" } as any}>SWR</div>
+           <div className="flex flex-col">
+              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Server Sync</span>
+              <span className="text-xs font-black font-mono">Real-time status</span>
+           </div>
         </div>
       </div>
 
-      <footer className="mt-10 text-center text-xs text-gray-700 border-t border-gray-800 pt-6 max-w-xl mx-auto">
-        <strong>PETUNJUK:</strong> Klik dan seret perangkat. Klik Simpan Posisi agar tata letak tidak hilang.
+      {/* FOOTER TIPS */}
+      <footer className="bg-base-100 p-2 border-t border-base-300 flex justify-center gap-8 text-[10px] font-bold opacity-50 uppercase tracking-widest">
+        <span>🖱️ Drag to Move</span>
+        <span>🔗 Connect Dots to Link</span>
+        <span>💾 Save to Permanent Storage</span>
       </footer>
     </div>
   );

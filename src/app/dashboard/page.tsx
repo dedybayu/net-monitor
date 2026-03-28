@@ -1,12 +1,12 @@
-// app/page.tsx
 'use client';
 
 import useSWR from 'swr';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
-// --- DEFINE TYPES (Mencegah error 'any') ---
+// --- TYPES ---
 interface NodeStatus {
-  id: number;
+  id: string;
   name: string;
   target: string;
   method: 'ICMP' | 'TCP';
@@ -20,143 +20,150 @@ interface ApiResponse {
   serverTimestamp: string;
 }
 
-// --- FETCHER FUNCTION ---
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function MonitorPage() {
-  // Di dalam function MonitorPage()
-const targetIP = "10.10.168.6";
-const targetPort = "3000";
-
+  const targetIP = "10.10.168.6";
+  const targetPort = "3000";
   const [countdown, setCountdown] = useState(5);
 
-// Masukkan IP dan Port ke dalam URL API
-const { data, error, isLoading } = useSWR<ApiResponse>(
-  `/api/status?ip=${targetIP}&port=${targetPort}`, 
-  fetcher, 
-  { 
-    refreshInterval: 5000,
-    onSuccess: () => setCountdown(5)
-  }
-);
+  const { data, error, isLoading } = useSWR<ApiResponse>(
+    `/api/status?ip=${targetIP}&port=${targetPort}`, 
+    fetcher, 
+    { 
+      refreshInterval: 5000,
+      onSuccess: () => setCountdown(5)
+    }
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => (prev > 1 ? prev - 1 : 5));
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
-  // ... sisa kode UI di bawahnya
-
-  // Tampilan Loading Awal
+  // --- LOADING STATE (DaisyUI Loading) ---
   if (isLoading && !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white font-sans">
-        <div className="text-center">
-          <div className="h-10 w-10 border-4 border-t-emerald-500 border-gray-700 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl font-medium animate-pulse text-gray-400">Menghubungkan ke Server...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+        <p className="text-sm font-bold tracking-widest animate-pulse">SYNCING NETWORK...</p>
       </div>
     );
   }
 
-  // Tampilan Error
+  // --- ERROR STATE (DaisyUI Alert) ---
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-white p-6">
-        <div className="bg-red-950 border border-red-500 p-6 rounded-2xl text-center max-w-md">
-          <h1 className="text-2xl font-bold text-red-200 mb-2">Gagal Memuat Data</h1>
-          <p className="text-red-300 text-sm mb-4">Pastikan backend worker dan API Route `/api/status` sudah berjalan.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition"
-          >
-            Coba Lagi
-          </button>
+      <div className="min-h-screen flex items-center justify-center p-6 bg-base-300">
+        <div className="alert alert-error shadow-lg max-w-md">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div>
+            <h3 className="font-bold">Koneksi Gagal!</h3>
+            <div className="text-xs">Tidak dapat terhubung ke API Monitoring.</div>
+          </div>
+          <button onClick={() => window.location.reload()} className="btn btn-sm">Retry</button>
         </div>
       </div>
     );
   }
 
-  // --- TAMPILAN UTAMA (UI AWAL + HYBRID LOGIC) ---
   return (
-    <main className="min-h-screen bg-gray-950 p-6 md:p-12 text-gray-100 font-sans">
+    <div className="min-h-screen bg-base-200 text-base-content font-sans">
       
-      {/* HEADER SECTION */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-800 pb-6 mb-10">
-        <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white">NETWORK MONITOR</h1>
-          <p className="text-gray-400 mt-1">Metode: Hybrid (Backend Worker + Cache + SWR)</p>
+      {/* NAVBAR / HEADER */}
+      <div className="navbar bg-base-100 border-b border-base-300 px-6 sticky top-0 z-50 shadow-sm">
+        <div className="flex-1">
+          <Link href="/" className="btn btn-ghost text-xl font-black tracking-tighter gap-2">
+            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-content">N</div>
+            NETMONITOR
+          </Link>
         </div>
-        
-        {/* STATUS BAR */}
-        <div className="flex items-center gap-3 bg-gray-900 px-4 py-2 rounded-full border border-gray-700 shadow-inner">
-          <div className={`h-3 w-3 rounded-full animate-pulse ${data?.nodes.some(n => n.status === 'offline') ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
-          <span className="text-sm font-medium text-gray-300">
-            Terakhir Update Server: {data?.nodes[0]?.lastCheck || 'N/A'}
-          </span>
-          <span className="text-xs text-gray-500 tabular-nums">
-            (UI Refresh: {countdown}s)
-          </span>
-        </div>
-      </header>
-
-      {/* GRID KARTU PERANGKAT */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {data?.nodes.map((node: NodeStatus) => (
-          <div key={node.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl transition-all hover:border-gray-600 hover:-translate-y-1">
-            
-            {/* BAGIAN ATAS KARTU: METODE & STATUS CIRCLE */}
-            <div className="flex items-center justify-between mb-4">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                node.method === 'ICMP' ? 'bg-sky-950 text-sky-200 border border-sky-700' : 'bg-purple-950 text-purple-200 border border-purple-700'
-              }`}>
-                {node.method} {node.method === 'ICMP' ? '⚡' : '🔌'}
-              </span>
-              
-              <div className="flex items-center gap-2.5">
-                <span className={`h-3 w-3 rounded-full ${
-                  node.status === 'online' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.7)]' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.7)]'
-                }`}></span>
-                <span className={`text-sm font-black uppercase tracking-wider ${
-                   node.status === 'online' ? 'text-emerald-400' : 'text-red-400'
-                }`}>
-                  {node.status}
-                </span>
-              </div>
-            </div>
-
-            {/* BAGIAN TENGAH: NAMA & TARGET */}
-            <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">{node.name}</h2>
-            <p className="text-sm text-gray-400 font-mono bg-gray-950 px-2 py-1 rounded inline-block mb-5 border border-gray-800">
-              Target: {node.target}
-            </p>
-
-            {/* BAGIAN BAWAH: INFO LATENCY & TYPE */}
-            <div className="border-t border-gray-800 pt-5 mt-2 grid grid-cols-2 gap-4">
-              <div className="bg-gray-950/50 p-4 rounded-xl border border-gray-800 shadow-inner">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Latency</p>
-                <p className="text-3xl font-extrabold text-white font-mono tracking-tight">{node.latency}</p>
-              </div>
-              <div className="bg-gray-950/50 p-4 rounded-xl border border-gray-800 shadow-inner">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Type</p>
-                <p className="text-xl font-bold text-white mt-1">{node.method === 'ICMP' ? 'Network' : 'Service'}</p>
-              </div>
-            </div>
-            
-            <p className="text-[10px] text-zinc-600 font-mono mt-4 text-center">
-              Last Worker Check: {node.lastCheck}
-            </p>
+        <div className="flex-none gap-4">
+          <div className="hidden md:flex flex-col items-end">
+             <span className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Next UI Refresh</span>
+             <progress className="progress progress-primary w-24" value={(5 - countdown) * 20} max="100"></progress>
           </div>
-        ))}
+          <Link href="/topology" className="btn btn-outline btn-sm rounded-full">Topologi</Link>
+        </div>
       </div>
-      
-      {/* FOOTER EXPLANATION */}
-      <footer className="mt-16 text-center text-xs text-gray-700 border-t border-gray-800 pt-8 max-w-2xl mx-auto leading-relaxed">
-        <strong>INFO EFISIENSI:</strong> Halaman ini menggunakan library SWR. Server melakukan pengecekan ke IP tujuan setiap 10 detik di background. Browser kamu hanya mengambil hasil terakhir dari memori server tanpa memicu proses ping baru. Jika kamu memindahkan tab, pengecekan ke API akan berhenti otomatis.
-      </footer>
-    </main>
+
+      <main className="p-6 md:p-10 max-w-7xl mx-auto">
+        
+        {/* STATS SUMMARY */}
+        <div className="stats shadow bg-base-100 w-full mb-10 border border-base-300">
+          <div className="stat">
+            <div className="stat-title">Device Monitored</div>
+            <div className="stat-value text-primary">{data?.nodes.length || 0}</div>
+            <div className="stat-desc">Semua target aktif</div>
+          </div>
+          <div className="stat">
+            <div className="stat-title">System Status</div>
+            <div className={`stat-value ${data?.nodes.some(n => n.status === 'offline') ? 'text-error' : 'text-success'}`}>
+              {data?.nodes.some(n => n.status === 'offline') ? 'Issues Found' : 'All Clear'}
+            </div>
+            <div className="stat-desc font-mono">Last Sync: {data?.nodes[0]?.lastCheck || 'N/A'}</div>
+          </div>
+          <div className="stat hidden md:grid">
+            <div className="stat-title">Refresh Interval</div>
+            <div className="stat-value text-secondary">5.0s</div>
+            <div className="stat-desc font-mono text-xs">UI Countdown: {countdown}s</div>
+          </div>
+        </div>
+
+        {/* GRID KARTU PERANGKAT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data?.nodes.map((node: NodeStatus) => (
+            <div key={node.id} className="card bg-base-100 shadow-xl border border-base-300 hover:border-primary/50 transition-all group">
+              <div className="card-body p-6">
+                
+                {/* STATUS & BADGE */}
+                <div className="flex justify-between items-center mb-2">
+                  <div className={`badge ${node.method === 'ICMP' ? 'badge-info' : 'badge-secondary'} badge-sm font-bold gap-2`}>
+                    {node.method === 'ICMP' ? '⚡ PING' : '🔌 TCP'}
+                  </div>
+                  <div className={`badge ${node.status === 'online' ? 'badge-success' : 'badge-error'} gap-2 font-black py-3 px-4 shadow-sm`}>
+                    <span className="h-2 w-2 rounded-full bg-current animate-pulse"></span>
+                    {node.status.toUpperCase()}
+                  </div>
+                </div>
+
+                {/* DEVICE INFO */}
+                <h2 className="card-title text-2xl font-black tracking-tight">{node.name}</h2>
+                <div className="badge badge-ghost font-mono text-[10px] opacity-70 mb-4 truncate w-full justify-start">
+                  ADDR: {node.target}
+                </div>
+
+                {/* LATENCY STATS (DaisyUI Data Display) */}
+                <div className="bg-base-200 rounded-2xl p-4 flex items-center justify-between border border-base-300 shadow-inner">
+                  <div>
+                    <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest block">Response Time</span>
+                    <span className="text-3xl font-black font-mono text-primary">{node.latency}</span>
+                  </div>
+                  <div className="text-right">
+                     <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest block">Class</span>
+                     <span className="badge badge-outline badge-xs uppercase font-bold">{node.method === 'ICMP' ? 'Net' : 'Svc'}</span>
+                  </div>
+                </div>
+
+                <div className="card-actions justify-center mt-4">
+                   <p className="text-[9px] opacity-40 font-mono italic">Verified at {node.lastCheck}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* FOOTER INFO */}
+        <div className="divider mt-20 opacity-20"></div>
+        <div className="text-center px-4 mb-10">
+          <p className="text-xs opacity-40 leading-relaxed max-w-xl mx-auto">
+            Sistem ini menggunakan sinkronisasi hybrid. Background worker pada server melakukan probe setiap 10 detik, 
+            sedangkan Dashboard melakukan polling setiap 5 detik menggunakan SWR.
+          </p>
+        </div>
+      </main>
+    </div>
   );
 }

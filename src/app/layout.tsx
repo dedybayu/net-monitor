@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+// 1. Import Provider yang sudah kita buat sebelumnya
+import NextAuthProvider from "@/src/components/NextAuthProvider"; 
 import Navbar from "@/src/components/landing/Navbar";
 import Footer from "@/src/components/landing/Footer";
 
@@ -16,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gawean",
-  description: "Ngatur kerja dadi luwih gampang",
+  title: "Net Monitor",
+  description: "Pantau Jaringanmu dengan Mudah dan Cepat",
 };
 
 export default function RootLayout({
@@ -30,13 +32,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
-        <Navbar />
+        {/* 2. Bungkus semua komponen dengan NextAuthProvider */}
+        <NextAuthProvider>
+          <Navbar />
 
-        <main className="flex-1 pt-16">
-          {children}
-        </main>
+          <main className="flex-1 pt-16">
+            {children}
+          </main>
 
-        <Footer />
+          <Footer />
+        </NextAuthProvider>
       </body>
     </html>
   );

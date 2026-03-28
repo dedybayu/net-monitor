@@ -9,10 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "daisyui": "^5.5.19",
     "next": "16.2.1",
+    "next-auth": "^4.24.13",
+    "pg": "^8.20.0",
     "ping": "^1.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -22,13 +26,19 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "@types/bcrypt": "^6.0.0",
-    "@types/node": "^20",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.19.37",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "prisma": "^7.5.0",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
