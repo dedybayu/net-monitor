@@ -133,7 +133,7 @@ export default function MonitorPage() {
               {apiData?.nodes.every(n => n.status === 'offline')
                 ? 'Down'
                 : apiData?.nodes.some(n => n.status === 'offline')
-                  ? 'Partial Issue'
+                  ? 'Warning'
                   : 'Healthy'}
             </div>
             <div className="stat-desc font-mono text-[10px]">Next update in {countdown}s</div>
