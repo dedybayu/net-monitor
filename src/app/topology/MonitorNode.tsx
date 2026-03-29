@@ -1,7 +1,16 @@
 import React from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, NodeProps } from 'reactflow';
 
-export const MonitorNode = ({ data }: any) => {
+// Definisi struktur data yang ada di dalam node
+export interface MonitorNodeData {
+  label: string;
+  target: string;
+  method: 'ICMP' | 'TCP';
+  status: 'online' | 'offline';
+  latency: string;
+}
+
+export const MonitorNode = ({ data }: NodeProps<MonitorNodeData>) => {
   const isOnline = data.status === 'online';
 
   return (
