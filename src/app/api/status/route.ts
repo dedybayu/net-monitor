@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       nodes: getCache(),
       serverTimestamp: new Date().toISOString()
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 }

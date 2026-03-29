@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ message: "Registrasi berhasil", user: newUser.email }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
   }
 }

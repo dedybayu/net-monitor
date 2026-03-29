@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import Link from "next/link"
 
-export default function LoginForm() {
+export default function RegisterForm() {
     const router = useRouter()
 
-    const [email, setEmail] = useState<string>("")
-    const [password, setPassword] = useState<string>("")
+    const [formData, setFormData] = useState({ name: '', email: '', password: '' })
     const [loading, setLoading] = useState<boolean>(false)
     const [error, setError] = useState<string>("")
 
-    // Auto-close error alert setelah 5 detik
+    // Auto-close alert error setelah 5 detik
     useEffect(() => {
         if (error) {
             const timer = setTimeout(() => {
@@ -28,20 +27,21 @@ export default function LoginForm() {
         setError("")
 
         try {
-            // Menggunakan NextAuth Credentials
-            const res = await signIn("credentials", {
-                email,
-                password,
-                redirect: false,
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                body: JSON.stringify(formData),
+                headers: { 'Content-Type': 'application/json' },
             })
 
-            if (res?.error) {
-                setError("Email atau password salah")
+            const data = await res.json()
+
+            if (res.ok) {
+                // Berhasil, arahkan ke login dengan pesan sukses
+                router.push('/login?message=Registrasi Berhasil! Silakan login.')
             } else {
-                router.push("/dashboard")
-                router.refresh() // Memastikan middleware mendeteksi session baru
+                setError(data.error || "Gagal mendaftarkan akun")
             }
-        } catch {
+        } catch (err) {
             setError("Terjadi kesalahan sistem")
         } finally {
             setLoading(false)
@@ -57,16 +57,31 @@ export default function LoginForm() {
                     <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-content font-black text-2xl mb-4 shadow-lg shadow-primary/20">
                         N
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight">
-                        Masuk Akun
+                    <h2 className="text-3xl font-black tracking-tight uppercase">
+                        Daftar Akun
                     </h2>
                     <p className="text-base-content/60 mt-2 font-medium">
-                        Selamat Datang di NetMonitor 👋
+                        Buat akun baru untuk Net-Monitor 👋
                     </p>
                 </div>
 
                 {/* FORM */}
                 <form className="space-y-5" onSubmit={handleSubmit}>
+
+                    {/* Nama Lengkap */}
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text font-bold opacity-70">Nama Lengkap</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Masukkan nama lengkap"
+                            className="input input-bordered w-full focus:input-primary transition-all"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                        />
+                    </div>
 
                     {/* Email */}
                     <div className="form-control">
@@ -77,8 +92,8 @@ export default function LoginForm() {
                             type="email"
                             placeholder="email@contoh.com"
                             className="input input-bordered w-full focus:input-primary transition-all"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
                         />
                     </div>
@@ -92,15 +107,10 @@ export default function LoginForm() {
                             type="password"
                             placeholder="••••••••"
                             className="input input-bordered w-full focus:input-primary transition-all"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             required
                         />
-                        <label className="label">
-                            <a href="#" className="label-text-alt link link-hover text-primary font-medium">
-                                Lupa password?
-                            </a>
-                        </label>
                     </div>
 
                     {/* ALERT ERROR */}
@@ -119,15 +129,15 @@ export default function LoginForm() {
                     {/* SUBMIT BUTTON */}
                     <button
                         type="submit"
-                        className="btn btn-primary w-full shadow-lg shadow-primary/20"
+                        className="btn btn-primary w-full shadow-lg shadow-primary/20 mt-4"
                         disabled={loading}
                     >
-                        {loading ? <span className="loading loading-spinner loading-sm"></span> : "Masuk"}
+                        {loading ? <span className="loading loading-spinner loading-sm"></span> : "Daftar Sekarang"}
                     </button>
                 </form>
 
                 {/* Divider */}
-                <div className="divider text-xs opacity-40 uppercase tracking-widest font-bold">atau masuk dengan</div>
+                <div className="divider text-xs opacity-40 uppercase tracking-widest font-bold">atau daftar dengan</div>
 
                 {/* Social Login */}
                 <div className="grid grid-cols-2 gap-3">
@@ -141,12 +151,12 @@ export default function LoginForm() {
                     </button>
                 </div>
 
-                {/* Footer */}
+                {/* FOOTER */}
                 <p className="text-center text-sm text-base-content/50 mt-8 font-medium">
-                    Belum punya akun?{" "}
-                    <a href="/register" className="link link-primary no-underline hover:underline">
-                        Daftar sekarang
-                    </a>
+                    Sudah punya akun?{" "}
+                    <Link href="/login" className="link link-primary no-underline hover:underline font-bold">
+                        Login di sini
+                    </Link>
                 </p>
 
             </div>

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   MonitoringTarget,
   Device,
-  ApiNodeStatus,
+  // ApiNodeStatus,
   StatusApiResponse
 } from '@/src/types/monitor';
 
