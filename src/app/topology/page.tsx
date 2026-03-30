@@ -65,7 +65,7 @@ const getInitialNodes = (): Node[] => [
   },
   {
     id: '3', type: 'monitor', position: { x: 500, y: 300 },
-    data: { label: 'Web Server 2', target: '10.10.168.6:3001', method: 'TCP', status: 'offline', latency: '...' }
+    data: { label: 'Web Server 2', target: '10.10.168.6:3000', method: 'TCP', status: 'offline', latency: '...' }
   },
 ];
 
@@ -74,10 +74,14 @@ const getInitialEdges = (): Edge[] => [
   { id: 'e1-3', source: '1', target: '3', animated: true, style: { stroke: '#3b82f6' } },
 ];
 
+
+
+const WORKSPACE_ID = 1;
 // --- 3. MAIN COMPONENT ---
 function TopologyEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   // Payload target untuk API
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
@@ -122,28 +126,52 @@ function TopologyEditor() {
     }
   }, [apiData, setNodes]);
 
-  // Load Storage on Mount
+// --- LOAD DARI DATABASE ---
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    async function loadTopology() {
       try {
-        const { nodes: sn, edges: se } = JSON.parse(saved);
-        setNodes(sn);
-        setEdges(se);
-      } catch (e) { 
-        console.error(e); 
-        setNodes(getInitialNodes());
-        setEdges(getInitialEdges());
+        const res = await fetch(`/api/workspace/${WORKSPACE_ID}/topology`);
+        const data = await res.json();
+        
+        if (data.nodes && data.nodes.length > 0) {
+          setNodes(data.nodes);
+          setEdges(data.edges);
+        } else {
+          // Jika DB kosong, gunakan initial data
+          setNodes(getInitialNodes());
+          setEdges(getInitialEdges());
+        }
+      } catch (e) {
+        console.error("Gagal load dari DB:", e);
       }
-    } else {
-      setNodes(getInitialNodes());
-      setEdges(getInitialEdges());
     }
+    loadTopology();
   }, [setNodes, setEdges]);
 
-  const onSave = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
-    alert('✅ Tata letak & konfigurasi topologi disimpan!');
+// --- SIMPAN KE DATABASE ---
+  const onSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/topology', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nodes,
+          edges,
+          workspaceId: WORKSPACE_ID,
+        }),
+      });
+
+      if (response.ok) {
+        alert('✅ Konfigurasi disimpan ke Database!');
+      } else {
+        throw new Error();
+      }
+    } catch (error) {
+      alert('❌ Gagal menyimpan ke Database');
+    } finally {
+      setIsSaving(false);
+    }
   }, [nodes, edges]);
 
   const onConnect = useCallback(

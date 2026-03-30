@@ -6,44 +6,34 @@ import Link from 'next/link';
 import {
   MonitoringTarget,
   Device,
-  // ApiNodeStatus,
   StatusApiResponse
 } from '@/src/types/monitor';
 
-// Fetcher dengan Type Safety penuh
-// Fungsi fetcher yang menerima key dari SWR
-const fetcher = async (key: [string, MonitoringTarget[]] | null): Promise<StatusApiResponse> => {
-  // Jika key null, jangan lakukan apa-apa
+// Fetcher untuk Status Monitoring (POST)
+const statusFetcher = async (key: [string, MonitoringTarget[]] | null): Promise<StatusApiResponse> => {
   if (!key) return { nodes: [] };
-
   const [url, payload] = key;
-
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ targets: payload }),
   });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.message || 'Gagal mengambil data monitoring');
-  }
-
+  if (!res.ok) throw new Error('Gagal mengambil data monitoring');
   return res.json();
 };
 
-// Data Inisial Perangkat
-const getInitialDevices = (): Device[] => [
-  { id: '1', name: 'Gateway Utama', target: '172.16.10.30', method: 'ICMP' },
-  { id: '2', name: 'Web Server 1', target: '172.16.10.1', method: 'ICMP' },
-  { id: '3', name: 'Web Server 2', target: '10.10.168.6:3001', method: 'TCP' },
-];
+// Fetcher umum untuk GET (Daftar Node)
+const getFetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function MonitorPage() {
-  const [devices] = useState<Device[]>(getInitialDevices());
+  // --- 1. AMBIL DAFTAR PERANGKAT DARI DATABASE ---
+  const { data: devices, error: deviceError } = useSWR<Device[]>('/api/workspace/1/nodes', getFetcher);
+  
   const [countdown, setCountdown] = useState<number>(5);
 
+  // --- 2. SIAPKAN PAYLOAD UNTUK CEK STATUS ---
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
+    if (!devices) return [];
     return devices.map((d) => {
       if (d.target.includes(':')) {
         const [ip, port] = d.target.split(':');
@@ -53,16 +43,17 @@ export default function MonitorPage() {
     });
   }, [devices]);
 
-  // Tentukan tipe Key secara eksplisit di Generic SWR
-  const { data: apiData, error, isLoading } = useSWR<StatusApiResponse, Error, [string, MonitoringTarget[]] | null>(
+  // --- 3. AMBIL STATUS REAL-TIME (PING/TCP) ---
+  const { data: apiData, error: statusError } = useSWR<StatusApiResponse, Error, [string, MonitoringTarget[]] | null>(
     targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
-    fetcher, // Sekarang ini sudah sinkron dan tidak butuh 'as any'
+    statusFetcher,
     {
       refreshInterval: 5000,
       onSuccess: () => setCountdown(5)
     }
   );
-  // Timer Countdown untuk indikator visual UI
+
+  // Timer Countdown
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => (prev > 1 ? prev - 1 : 5));
@@ -70,26 +61,22 @@ export default function MonitorPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // --- UI STATES (Loading & Error) ---
-  if (isLoading && !apiData) {
+  // --- UI STATES ---
+  if (!devices && !deviceError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4">
         <span className="loading loading-spinner loading-lg text-primary"></span>
-        <p className="text-sm font-bold tracking-widest animate-pulse uppercase">Syncing Network Status...</p>
+        <p className="text-sm font-bold tracking-widest animate-pulse uppercase">Connecting to Database...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (deviceError || statusError) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-base-200">
         <div className="alert alert-error shadow-lg max-w-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <div>
-            <h3 className="font-bold">API Error</h3>
-            <div className="text-xs">{error.message}</div>
-          </div>
-          <button onClick={() => window.location.reload()} className="btn btn-sm btn-ghost">Re-sync</button>
+          <span>Error: {deviceError?.message || statusError?.message}</span>
+          <button onClick={() => window.location.reload()} className="btn btn-sm btn-ghost">Retry</button>
         </div>
       </div>
     );
@@ -119,30 +106,21 @@ export default function MonitorPage() {
         <div className="stats shadow bg-base-100 w-full mb-10 border border-base-300 overflow-hidden">
           <div className="stat">
             <div className="stat-title font-bold text-[10px] uppercase tracking-widest opacity-60">Nodes Tracked</div>
-            <div className="stat-value text-primary">{devices.length}</div>
-            <div className="stat-desc font-medium">Active Monitoring</div>
+            <div className="stat-value text-primary">{devices?.length || 0}</div>
+            <div className="stat-desc font-medium">Database Source</div>
           </div>
           <div className="stat border-l border-base-300">
             <div className="stat-title font-bold text-[10px] uppercase tracking-widest opacity-60">Network Health</div>
-            <div className={`stat-value ${apiData?.nodes.every(n => n.status === 'offline')
-                ? 'text-error' // Semua Mati
-                : apiData?.nodes.some(n => n.status === 'offline')
-                  ? 'text-warning' // Ada beberapa yang mati
-                  : 'text-success' // Semua Online
-              }`}>
-              {apiData?.nodes.every(n => n.status === 'offline')
-                ? 'Down'
-                : apiData?.nodes.some(n => n.status === 'offline')
-                  ? 'Warning'
-                  : 'Healthy'}
+            <div className={`stat-value ${apiData?.nodes.every(n => n.status === 'online') ? 'text-success' : 'text-error'}`}>
+              {apiData?.nodes.every(n => n.status === 'online') ? 'Healthy' : 'Issues Found'}
             </div>
-            <div className="stat-desc font-mono text-[10px]">Next update in {countdown}s</div>
+            <div className="stat-desc font-mono text-[10px]">Auto-sync every 5s</div>
           </div>
         </div>
 
         {/* GRID CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {devices.map((device) => {
+          {devices?.map((device) => {
             const statusData = apiData?.nodes.find(n => n.target === device.target);
             const isOnline = statusData?.status === 'online';
 
@@ -160,24 +138,17 @@ export default function MonitorPage() {
                     </div>
                   </div>
 
-                  {/* Latency Info Box */}
                   <div className={`rounded-2xl p-5 flex items-center justify-between border border-base-300 shadow-inner transition-colors ${isOnline ? 'bg-base-200 group-hover:bg-primary/5' : 'bg-error/5'}`}>
                     <div>
                       <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest block mb-1">Response</span>
                       <span className={`text-3xl font-black font-mono leading-none ${isOnline ? 'text-primary' : 'text-error'}`}>
-                        {statusData?.latency || 'N/A'}
+                        {statusData?.latency || '---'}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest block mb-1">Check</span>
-                      <span className="badge badge-outline badge-xs font-bold uppercase">{device.method === 'ICMP' ? 'Ping' : 'Port'}</span>
+                       <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest block mb-1">Method</span>
+                       <span className="badge badge-outline badge-xs font-bold uppercase">{device.method}</span>
                     </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-between items-center opacity-40">
-                    <span className="text-[9px] font-mono italic">
-                      Sync: {apiData?.serverTimestamp ? new Date(apiData.serverTimestamp).toLocaleTimeString() : '--:--'}
-                    </span>
                   </div>
                 </div>
               </div>

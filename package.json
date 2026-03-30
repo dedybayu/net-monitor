@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3090",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3090",
     "lint": "eslint"
   },
   "dependencies": {
@@ -36,6 +36,7 @@
     "prisma": "^7.5.0",
     "tailwindcss": "^4.2.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "prisma": {

@@ -1,12 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// Model Level
 model Level {
   level_id   Int      @id @default(autoincrement())
   level_name String
@@ -18,18 +18,89 @@ model Level {
   @@map("levels")
 }
 
-// Model User
 model User {
-  user_id         Int      @id @default(autoincrement())
+  user_id         Int             @id @default(autoincrement())
   name            String
-  email           String   @unique
+  email           String          @unique
   password        String
   level_id        Int
   profile_picture String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-
-  level           Level    @relation(fields: [level_id], references: [level_id])
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  workspaces      UserWorkspace[]
+  level           Level           @relation(fields: [level_id], references: [level_id])
 
   @@map("users")
+}
+
+model UserWorkspace {
+  user_workspace_id Int       @id @default(autoincrement())
+  user_id           Int
+  workspace_id      Int
+  permision         String
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+  user              User      @relation(fields: [user_id], references: [user_id])
+  workspace         Workspace @relation(fields: [workspace_id], references: [workspace_id])
+
+  @@map("user_workspaces")
+}
+
+model Workspace {
+  workspace_id          Int             @id @default(autoincrement())
+  workspace_name        String
+  workspace_description String?
+  created_at            DateTime        @default(now())
+  updated_at            DateTime        @updatedAt
+  edges                 Edge[]
+  nodes                 Node[]
+  users                 UserWorkspace[]
+
+  @@map("workspaces")
+}
+
+model Node {
+  node_id          Int           @id @default(autoincrement())
+  workspace_id     Int
+  node_react_id    String
+  node_type        String        @default("monitor")
+  node_posX        Float
+  node_posY        Float
+  node_label       String
+  node_description String?
+  node_ip_address  String
+  node_method      String        @default("ICMP")
+  node_port        Int?          @default(0)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  services         NodeService[]
+  workspace        Workspace     @relation(fields: [workspace_id], references: [workspace_id])
+
+  @@map("nodes")
+}
+
+model Edge {
+  edge_id         Int       @id @default(autoincrement())
+  workspace_id    Int
+  source_react_id String
+  target_react_id String
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  workspace       Workspace @relation(fields: [workspace_id], references: [workspace_id])
+
+  @@map("edges")
+}
+
+model NodeService {
+  node_service_id          Int      @id @default(autoincrement())
+  node_id                  Int
+  node_service_name        String
+  node_service_description String?
+  node_service_method      String
+  node_service_port        Int
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+  node                     Node     @relation(fields: [node_id], references: [node_id])
+
+  @@map("node_services")
 }
