@@ -259,37 +259,37 @@ function TopologyEditor() {
           <Controls className="bg-base-100 border-base-300 shadow-2xl rounded-2xl overflow-hidden" />
         </ReactFlow>
 
-{/* POPUP NOTIFIKASI KUSTOM - AUTO ADAPTIVE THEME */}
-{notification && (
-  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300 px-4">
-    <div className={`
+        {/* POPUP NOTIFIKASI KUSTOM - AUTO ADAPTIVE THEME */}
+        {notification && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300 px-4">
+            <div className={`
       alert shadow-lg py-2 px-4 rounded-xl min-w-[180px] w-auto 
       backdrop-blur-md border border-base-content/10
-      ${notification.type === 'success' 
-        ? 'bg-success/70 text-success-content' 
-        : 'bg-error/70 text-error-content'
-      }
+      ${notification.type === 'success'
+                ? 'bg-success/70 text-success-content'
+                : 'bg-error/70 text-error-content'
+              }
     `}>
-      <div className="flex items-center gap-2">
-        {/* ICON */}
-        {notification.type === 'success' ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )}
+              <div className="flex items-center gap-2">
+                {/* ICON */}
+                {notification.type === 'success' ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
 
-        {/* TEXT - Menggunakan ukuran kecil & tracking lebar agar elegan */}
-        <span className="text-[12px] font-bold uppercase tracking-widest whitespace-nowrap">
-          {notification.message}
-        </span>
-      </div>
-    </div>
-  </div>
-)}
+                {/* TEXT - Menggunakan ukuran kecil & tracking lebar agar elegan */}
+                <span className="text-[12px] font-bold uppercase tracking-widest whitespace-nowrap">
+                  {notification.message}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* SYNC INDICATOR */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xl">
