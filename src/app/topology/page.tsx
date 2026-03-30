@@ -13,6 +13,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   ReactFlowProvider,
+  NodeChange,
+  EdgeChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
@@ -36,12 +38,9 @@ interface StatusApiResponse {
   timestamp?: string;
 }
 
-// --- 2. GLOBAL CONFIG (OUTSIDE COMPONENT TO PREVENT RE-RENDERS) ---
-const STORAGE_KEY = 'net-monitor-topology-v5';
-
-// Definisi nodeTypes di sini agar referensi memori statis (MENGHILANGKAN WARNING)
+// --- 2. GLOBAL CONFIG ---
 const nodeTypes = { monitor: MonitorNode };
-
+const WORKSPACE_ID = 1;
 
 const fetcher = async ([url, targets]: [string, MonitoringTarget[]]): Promise<StatusApiResponse> => {
   const res = await fetch(url, {
@@ -53,36 +52,12 @@ const fetcher = async ([url, targets]: [string, MonitoringTarget[]]): Promise<St
   return res.json();
 };
 
-// Initial Data
-const getInitialNodes = (): Node[] => [
-  {
-    id: '1', type: 'monitor', position: { x: 300, y: 100 },
-    data: { label: 'Gateway', target: '172.16.10.30', method: 'ICMP', status: 'offline', latency: '...' }
-  },
-  {
-    id: '2', type: 'monitor', position: { x: 100, y: 300 },
-    data: { label: 'Web Server 1', target: '172.16.10.1', method: 'ICMP', status: 'offline', latency: '...' }
-  },
-  {
-    id: '3', type: 'monitor', position: { x: 500, y: 300 },
-    data: { label: 'Web Server 2', target: '10.10.168.6:3000', method: 'TCP', status: 'offline', latency: '...' }
-  },
-];
-
-const getInitialEdges = (): Edge[] => [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#3b82f6' } },
-  { id: 'e1-3', source: '1', target: '3', animated: true, style: { stroke: '#3b82f6' } },
-];
-
-
-
-const WORKSPACE_ID = 1;
-
 // --- 3. MAIN COMPONENT ---
 function TopologyEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [hasChanges, setHasChanges] = React.useState(false);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [newNodeData, setNewNodeData] = React.useState({
@@ -91,8 +66,29 @@ function TopologyEditor() {
     method: 'ICMP' as 'ICMP' | 'TCP'
   });
 
+  // --- WRAPPERS UNTUK INDIKATOR PERUBAHAN ---
+  const onNodesChangeWithIndicator = useCallback((changes: NodeChange[]) => {
+    // Tandai perubahan jika node digeser (position), dihapus (remove), atau ditambah (add)
+    const isActuallyChanging = changes.some((c) =>
+      c.type === 'position' || c.type === 'remove'
+    );
 
-  // Payload target untuk API
+    if (isActuallyChanging) setHasChanges(true);
+    onNodesChange(changes);
+  }, [onNodesChange]);
+
+  const onEdgesChangeWithIndicator = useCallback((changes: EdgeChange[]) => {
+    // Jika ada perubahan pada edge (tambah/hapus), tandai ada perubahan
+    if (changes.length > 0) setHasChanges(true);
+    onEdgesChange(changes);
+  }, [onEdgesChange]);
+
+  const onConnectWithIndicator = useCallback((params: Connection) => {
+    setHasChanges(true);
+    setEdges((eds) => addEdge({ ...params, animated: true }, eds));
+  }, [setEdges]);
+
+  // Payload target untuk API Monitoring
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
     return nodes.map((node) => {
       const targetStr = node.data.target as string;
@@ -104,14 +100,25 @@ function TopologyEditor() {
     });
   }, [nodes]);
 
-  // SWR Hook
+  // SWR Hook (Real-time Status)
   const { data: apiData } = useSWR<StatusApiResponse, Error, [string, MonitoringTarget[]] | null>(
     targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
     fetcher,
     { refreshInterval: 5000 }
   );
 
-  // Sinkronisasi data API ke Nodes
+  // Di dalam function TopologyEditor()
+  const [notification, setNotification] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Helper untuk menutup otomatis setelah 3 detik
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Update Status dari API ke Canvas
   useEffect(() => {
     if (apiData?.nodes) {
       setNodes((nds) =>
@@ -141,14 +148,10 @@ function TopologyEditor() {
       try {
         const res = await fetch(`/api/workspace/${WORKSPACE_ID}/topology`);
         const data = await res.json();
-
         if (data.nodes && data.nodes.length > 0) {
           setNodes(data.nodes);
           setEdges(data.edges);
-        } else {
-          // Jika DB kosong, gunakan initial data
-          setNodes(getInitialNodes());
-          setEdges(getInitialEdges());
+          setHasChanges(false); // Reset indikator setelah load sukses
         }
       } catch (e) {
         console.error("Gagal load dari DB:", e);
@@ -157,14 +160,14 @@ function TopologyEditor() {
     loadTopology();
   }, [setNodes, setEdges]);
 
+  // --- TAMBAH NODE BARU ---
   const handleAddNode = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const id = `node_${Date.now()}`; // ID Unik sementara
+    const id = `node_${Date.now()}`;
     const newNode: Node = {
       id,
       type: 'monitor',
-      position: { x: 100, y: 100 }, // Posisi default sesuai permintaan
+      position: { x: 100, y: 100 },
       data: {
         label: newNodeData.label,
         target: newNodeData.target,
@@ -175,8 +178,9 @@ function TopologyEditor() {
     };
 
     setNodes((nds) => nds.concat(newNode));
-    setIsModalOpen(false); // Tutup modal
-    setNewNodeData({ label: '', target: '', method: 'ICMP' }); // Reset form
+    setHasChanges(true); // Tandai ada perubahan
+    setIsModalOpen(false);
+    setNewNodeData({ label: '', target: '', method: 'ICMP' });
   };
 
   // --- SIMPAN KE DATABASE ---
@@ -186,29 +190,21 @@ function TopologyEditor() {
       const response = await fetch(`/api/workspace/${WORKSPACE_ID}/topology`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nodes,
-          edges,
-          workspaceId: WORKSPACE_ID,
-        }),
+        body: JSON.stringify({ nodes, edges, workspaceId: WORKSPACE_ID }),
       });
 
       if (response.ok) {
-        alert('✅ Konfigurasi disimpan ke Database!');
+        setHasChanges(false); // Reset indikator setelah simpan sukses
+        setNotification({ message: 'Konfigurasi berhasil disimpan ke database', type: 'success' });
       } else {
         throw new Error();
       }
-    } catch (error) {
-      alert('❌ Gagal menyimpan ke Database' + (error instanceof Error ? `: ${error.message}` : ''));
+    } catch {
+      setNotification({ message: 'Gagal menyimpan konfigurasi!', type: 'error' });
     } finally {
       setIsSaving(false);
     }
   }, [nodes, edges]);
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setEdges]
-  );
 
   return (
     <div className="flex flex-col h-screen bg-base-200 text-base-content">
@@ -216,7 +212,14 @@ function TopologyEditor() {
       <div className="navbar bg-base-100 border-b border-base-300 px-6 z-10 shadow-sm">
         <div className="flex-1">
           <div className="flex flex-col">
-            <h1 className="text-md font-black tracking-tight leading-none uppercase">Network Topology</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-md font-black tracking-tight leading-none uppercase">Network Topology</h1>
+              {hasChanges && (
+                <span className="badge badge-warning badge-xs font-bold text-[8px] animate-bounce px-2">
+                  BELUM DISIMPAN
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="badge badge-success badge-xs animate-pulse"></span>
               <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">Live Monitoring Active</span>
@@ -231,7 +234,13 @@ function TopologyEditor() {
             + Tambah Device
           </button>
           <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
-          <button onClick={onSave} className="btn btn-primary btn-sm rounded-lg px-6 font-bold">Simpan</button>
+          <button
+            onClick={onSave}
+            disabled={hasChanges === false || isSaving}
+            className={`btn btn-sm rounded-lg px-6 font-bold ${hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-ghost border-base-300'}`}
+          >
+            {isSaving ? 'Menyimpan...' : 'Simpan'}
+          </button>
         </div>
       </div>
 
@@ -240,24 +249,53 @@ function TopologyEditor() {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          nodeTypes={nodeTypes} // Menggunakan referensi stabil dari luar
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChangeWithIndicator}
+          onEdgesChange={onEdgesChangeWithIndicator}
+          onConnect={onConnectWithIndicator}
           fitView
         >
           <Background color="#999" gap={30} size={1} />
           <Controls className="bg-base-100 border-base-300 shadow-2xl rounded-2xl overflow-hidden" />
         </ReactFlow>
 
+{/* POPUP NOTIFIKASI KUSTOM - AUTO ADAPTIVE THEME */}
+{notification && (
+  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300 px-4">
+    <div className={`
+      alert shadow-lg py-2 px-4 rounded-xl min-w-[180px] w-auto 
+      backdrop-blur-md border border-base-content/10
+      ${notification.type === 'success' 
+        ? 'bg-success/70 text-success-content' 
+        : 'bg-error/70 text-error-content'
+      }
+    `}>
+      <div className="flex items-center gap-2">
+        {/* ICON */}
+        {notification.type === 'success' ? (
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+
+        {/* TEXT - Menggunakan ukuran kecil & tracking lebar agar elegan */}
+        <span className="text-[12px] font-bold uppercase tracking-widest whitespace-nowrap">
+          {notification.message}
+        </span>
+      </div>
+    </div>
+  </div>
+)}
+
         {/* SYNC INDICATOR */}
         <div className="absolute bottom-6 right-6 flex items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xl">
           <div
             className="radial-progress text-primary text-[10px]"
-            style={{
-              "--value": "70",
-              "--size": "2rem"
-            } as React.CSSProperties}
+            style={{ "--value": "70", "--size": "2rem" } as React.CSSProperties}
           >
             SWR
           </div>
@@ -272,7 +310,7 @@ function TopologyEditor() {
           <div className="modal modal-open">
             <div className="modal-box border border-base-300 shadow-2xl">
               <h3 className="font-black text-lg uppercase tracking-tight">Tambah Perangkat Baru</h3>
-              <p className="py-2 text-xs opacity-60">Node akan muncul di posisi koordinat 100, 100.</p>
+              <p className="py-2 text-xs opacity-60">Node akan muncul di koordinat 100, 100.</p>
 
               <form onSubmit={handleAddNode} className="space-y-4 mt-4">
                 <div className="form-control">
@@ -320,10 +358,8 @@ function TopologyEditor() {
             <div className="modal-backdrop bg-black/50" onClick={() => setIsModalOpen(false)}></div>
           </div>
         )}
-
       </div>
 
-      {/* FOOTER TIPS */}
       <footer className="bg-base-100 p-2 border-t border-base-300 flex justify-center gap-8 text-[10px] font-bold opacity-50 uppercase tracking-widest">
         <span>🖱️ Drag to Move</span>
         <span>🔗 Connect Dots to Link</span>
