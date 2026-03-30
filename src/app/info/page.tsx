@@ -2,6 +2,12 @@
 import { signOut, useSession } from "next-auth/react";
 // import { useRouter } from "next/navigation";
 
+interface UserInfo {
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function InfoPage() {
   const { data: session, status } = useSession();
 //   const router = useRouter();
@@ -30,13 +36,13 @@ export default function InfoPage() {
             Halo, <span className="font-semibold text-base-content">{session?.user?.name}</span>.
           </p>
           <p className="text-sm">
-            Akun Anda terdaftar sebagai <span className="badge badge-ghost">{(session?.user as any)?.role}</span>. 
+            Akun Anda terdaftar sebagai <span className="badge badge-ghost">{(session?.user as UserInfo)?.role}</span>. 
             Anda tidak memiliki izin untuk mengakses Dashboard utama.
           </p>
 
           <div className="card-actions mt-8 w-full">
             <button 
-              onClick={() => signOut({ callbackUrl: '/login' })}
+              onClick={() => signOut({ callbackUrl: '/' })}
               className="btn btn-error btn-outline w-full gap-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

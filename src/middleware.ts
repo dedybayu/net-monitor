@@ -35,5 +35,10 @@ export default withAuth(
 
 export const config = {
   // Tambahkan /login dan /register ke dalam matcher agar diproses middleware
-  matcher: ["/dashboard/:path*", "/info/:path*", "/login", "/register"],
+  matcher: [
+    "/dashboard/:path*",
+    "/info/:path*", 
+    "/login", 
+    "/register", 
+    "/topology"],
 };

@@ -6,6 +6,16 @@ interface RouteParams {
   params: Promise<{ workspace_id: string }>;
 }
 
+interface ReactFlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  animated?: boolean;
+  style?: {
+    stroke?: string;
+  };
+  // Tambahkan property lain jika kamu mengirimkan data tambahan dari frontend
+}
 
 export async function GET(request: Request, { params }: RouteParams) {
     // 1. Ambil workspace_id dari parameter URL
@@ -45,52 +55,74 @@ export async function GET(request: Request, { params }: RouteParams) {
   return NextResponse.json({ nodes: rfNodes, edges: rfEdges });
 }
 
-export async function POST(req: Request) {
-  const { nodes, edges, workspaceIdInt } = await req.json();
+// app/api/workspace/[workspace_id]/topology/route.ts
+
+export async function POST(req: Request, { params }: RouteParams) {
+  const { workspace_id } = await params;
+  const workspaceIdInt = parseInt(workspace_id, 10);
+  const { nodes, edges } = await req.json();
 
   try {
     await prisma.$transaction(async (tx) => {
       // 1. Hapus Edges lama
       await tx.edge.deleteMany({ where: { workspace_id: workspaceIdInt } });
 
-      // 2. Upsert Nodes (Update jika ada, Create jika baru)
+      // 2. Simpan/Update Nodes
       for (const node of nodes) {
         const [ip, port] = node.data.target.split(':');
-        await tx.node.upsert({
-          where: { 
-            // Anggap node_react_id + workspace_id bersifat unik
-            node_id: parseInt(node.id) // Atau gunakan kriteria lain jika ID react bukan integer
-          },
-          update: {
-            node_posX: node.position.x,
-            node_posY: node.position.y,
-            node_label: node.data.label,
-          },
-          create: {
+        
+        // Kita gunakan findFirst + conditional update/create 
+        // karena node_id di DB adalah Integer Autoincrement
+        const existingNode = await tx.node.findFirst({
+          where: {
             workspace_id: workspaceIdInt,
-            node_react_id: node.id,
-            node_label: node.data.label,
-            node_ip_address: ip,
-            node_port: port ? parseInt(port) : 0,
-            node_method: node.data.method,
-            node_posX: node.position.x,
-            node_posY: node.position.y,
-          },
+            node_react_id: node.id // ID unik dari React Flow (e.g. '1' atau 'node_xxx')
+          }
         });
+
+        if (existingNode) {
+          await tx.node.update({
+            where: { node_id: existingNode.node_id },
+            data: {
+              node_posX: node.position.x,
+              node_posY: node.position.y,
+              node_label: node.data.label,
+              node_ip_address: ip,
+              node_port: port ? parseInt(port) : 0,
+              node_method: node.data.method,
+            }
+          });
+        } else {
+          await tx.node.create({
+            data: {
+              workspace_id: workspaceIdInt,
+              node_react_id: node.id,
+              node_label: node.data.label,
+              node_ip_address: ip,
+              node_port: port ? parseInt(port) : 0,
+              node_method: node.data.method,
+              node_posX: node.position.x,
+              node_posY: node.position.y,
+            }
+          });
+        }
       }
 
       // 3. Simpan Edges baru
-      await tx.edge.createMany({
-        data: edges.map((edge: any) => ({
-          workspace_id: workspaceIdInt,
-          source_react_id: edge.source,
-          target_react_id: edge.target,
-        })),
-      });
+      if (edges.length > 0) {
+        await tx.edge.createMany({
+          data: edges.map((edge: ReactFlowEdge) => ({
+            workspace_id: workspaceIdInt,
+            source_react_id: edge.source,
+            target_react_id: edge.target,
+          })),
+        });
+      }
     });
 
     return NextResponse.json({ message: 'Saved successfully' });
-  } catch {
+  } catch (error) {
+    console.error("SAVE ERROR:", error); // Muncul di terminal VS Code
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
   }
 }

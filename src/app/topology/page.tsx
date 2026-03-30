@@ -77,11 +77,20 @@ const getInitialEdges = (): Edge[] => [
 
 
 const WORKSPACE_ID = 1;
+
 // --- 3. MAIN COMPONENT ---
 function TopologyEditor() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [newNodeData, setNewNodeData] = React.useState({
+    label: '',
+    target: '',
+    method: 'ICMP' as 'ICMP' | 'TCP'
+  });
+
 
   // Payload target untuk API
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
@@ -126,13 +135,13 @@ function TopologyEditor() {
     }
   }, [apiData, setNodes]);
 
-// --- LOAD DARI DATABASE ---
+  // --- LOAD DARI DATABASE ---
   useEffect(() => {
     async function loadTopology() {
       try {
         const res = await fetch(`/api/workspace/${WORKSPACE_ID}/topology`);
         const data = await res.json();
-        
+
         if (data.nodes && data.nodes.length > 0) {
           setNodes(data.nodes);
           setEdges(data.edges);
@@ -148,11 +157,33 @@ function TopologyEditor() {
     loadTopology();
   }, [setNodes, setEdges]);
 
-// --- SIMPAN KE DATABASE ---
+  const handleAddNode = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const id = `node_${Date.now()}`; // ID Unik sementara
+    const newNode: Node = {
+      id,
+      type: 'monitor',
+      position: { x: 100, y: 100 }, // Posisi default sesuai permintaan
+      data: {
+        label: newNodeData.label,
+        target: newNodeData.target,
+        method: newNodeData.method,
+        status: 'offline',
+        latency: '...'
+      },
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+    setIsModalOpen(false); // Tutup modal
+    setNewNodeData({ label: '', target: '', method: 'ICMP' }); // Reset form
+  };
+
+  // --- SIMPAN KE DATABASE ---
   const onSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      const response = await fetch('/api/topology', {
+      const response = await fetch(`/api/workspace/${WORKSPACE_ID}/topology`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -168,7 +199,7 @@ function TopologyEditor() {
         throw new Error();
       }
     } catch (error) {
-      alert('❌ Gagal menyimpan ke Database');
+      alert('❌ Gagal menyimpan ke Database' + (error instanceof Error ? `: ${error.message}` : ''));
     } finally {
       setIsSaving(false);
     }
@@ -193,6 +224,12 @@ function TopologyEditor() {
           </div>
         </div>
         <div className="flex-none gap-2">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-outline btn-sm rounded-lg font-bold"
+          >
+            + Tambah Device
+          </button>
           <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>
           <button onClick={onSave} className="btn btn-primary btn-sm rounded-lg px-6 font-bold">Simpan</button>
         </div>
@@ -229,13 +266,68 @@ function TopologyEditor() {
             <span className="text-xs font-black font-mono">Real-time status</span>
           </div>
         </div>
+
+        {/* MODAL TAMBAH NODE */}
+        {isModalOpen && (
+          <div className="modal modal-open">
+            <div className="modal-box border border-base-300 shadow-2xl">
+              <h3 className="font-black text-lg uppercase tracking-tight">Tambah Perangkat Baru</h3>
+              <p className="py-2 text-xs opacity-60">Node akan muncul di posisi koordinat 100, 100.</p>
+
+              <form onSubmit={handleAddNode} className="space-y-4 mt-4">
+                <div className="form-control">
+                  <label className="label"><span className="label-text font-bold">Label Nama</span></label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Core Switch"
+                    className="input input-bordered w-full focus:input-primary"
+                    value={newNodeData.label}
+                    onChange={(e) => setNewNodeData({ ...newNodeData, label: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label"><span className="label-text font-bold">Target IP / Host</span></label>
+                  <input
+                    type="text"
+                    placeholder="192.168.1.1 atau 10.10.1.1:8080"
+                    className="input input-bordered w-full focus:input-primary"
+                    value={newNodeData.target}
+                    onChange={(e) => setNewNodeData({ ...newNodeData, target: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-control">
+                  <label className="label"><span className="label-text font-bold">Metode</span></label>
+                  <select
+                    className="select select-bordered w-full"
+                    value={newNodeData.method}
+                    onChange={(e) => setNewNodeData({ ...newNodeData, method: e.target.value as 'ICMP' | 'TCP' })}
+                  >
+                    <option value="ICMP">ICMP (Ping)</option>
+                    <option value="TCP">TCP (Service Port)</option>
+                  </select>
+                </div>
+
+                <div className="modal-action">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-ghost">Batal</button>
+                  <button type="submit" className="btn btn-primary px-8">Tambahkan ke Kanvas</button>
+                </div>
+              </form>
+            </div>
+            <div className="modal-backdrop bg-black/50" onClick={() => setIsModalOpen(false)}></div>
+          </div>
+        )}
+
       </div>
 
       {/* FOOTER TIPS */}
       <footer className="bg-base-100 p-2 border-t border-base-300 flex justify-center gap-8 text-[10px] font-bold opacity-50 uppercase tracking-widest">
         <span>🖱️ Drag to Move</span>
         <span>🔗 Connect Dots to Link</span>
-        <span>💾 Save to Permanent Storage</span>
+        <span>💾 Save to Database</span>
       </footer>
     </div>
   );
