@@ -47,6 +47,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   // Map data DB kembali ke format React Flow
   const rfNodes = nodes.map((n) => ({
     id: n.node_react_id,
+    node_id: n.node_id,
     type: n.node_type,
     position: { x: n.node_posX, y: n.node_posY },
     data: {
