@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <main>
       {/* HERO SECTION */}
-      <section id="home" className="hero min-h-[90vh] bg-base-100 relative overflow-hidden">
+      <section id="home" className="hero min-h-[90vh] bg-base-100 relative overflow-hidden bg-gradient-to-br from-primary/20 to-success/20">
         {/* Background Glow Effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-blue-500/10" />
 

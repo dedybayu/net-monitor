@@ -17,7 +17,7 @@ export const MonitorNode = ({ data }: NodeProps<MonitorNodeData>) => {
     <div className={`
       card w-52 shadow-xl border transition-all duration-500
       ${isOnline 
-        ? 'bg-success/10 border-error/30 hover:border-success/50' 
+        ? 'bg-success/10 border-success/30 hover:border-success/50' 
         : 'bg-error/10 border-error/30 hover:border-error/60'
       }
     `}>

@@ -14,7 +14,8 @@ import ReactFlow, {
   useEdgesState,
   ReactFlowProvider,
   NodeChange,
-  EdgeChange
+  EdgeChange,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
@@ -65,6 +66,8 @@ function TopologyEditor() {
     target: '',
     method: 'ICMP' as 'ICMP' | 'TCP'
   });
+
+  const { screenToFlowPosition } = useReactFlow();
 
   // --- WRAPPERS UNTUK INDIKATOR PERUBAHAN ---
   const onNodesChangeWithIndicator = useCallback((changes: NodeChange[]) => {
@@ -163,11 +166,22 @@ function TopologyEditor() {
   // --- TAMBAH NODE BARU ---
   const handleAddNode = (e: React.FormEvent) => {
     e.preventDefault();
+    // 1. Hitung titik tengah layar (viewport)
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    // 2. Konversi koordinat layar ke koordinat koordinat kanvas React Flow
+    // Ini memastikan node tetap di tengah meski kamu sudah melakukan Zoom atau Pan (geser kanvas)
+    const position = screenToFlowPosition({
+      x: centerX,
+      y: centerY,
+    });
+
     const id = `node_${Date.now()}`;
     const newNode: Node = {
       id,
       type: 'monitor',
-      position: { x: 100, y: 100 },
+      position,
       data: {
         label: newNodeData.label,
         target: newNodeData.target,

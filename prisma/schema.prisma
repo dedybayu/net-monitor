@@ -76,7 +76,9 @@ model Node {
   services         NodeService[]
   workspace        Workspace     @relation(fields: [workspace_id], references: [workspace_id])
 
+  @@unique([workspace_id, node_react_id])
   @@map("nodes")
+  
 }
 
 model Edge {
