@@ -473,7 +473,7 @@ const onNodeClick = useCallback((_: React.MouseEvent, node: TopologyNode) => {
                             <div className="flex items-center gap-4">
                               <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs border ${isSvcOnline ? 'bg-success/10 text-success border-success/20' : 'bg-error/10 text-error border-error/20'
                                 }`}>
-                                {svc.node_service_port}
+                                {svc.node_service_port || 'ICMP'}
                               </div>
                               <div>
                                 <h4 className="text-sm font-bold leading-none">{svc.node_service_name}</h4>
