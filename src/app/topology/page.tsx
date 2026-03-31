@@ -13,7 +13,8 @@ import ReactFlow, {
   ReactFlowProvider,
   NodeChange,
   EdgeChange,
-  useReactFlow
+  useReactFlow,
+  Node as ReactFlowNode
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
@@ -41,7 +42,7 @@ interface NodeService {
   node_service_id: number;
   node_service_name: string;
   node_service_description: string;
-  node_service_ip: string;
+  node_service_ip_address: string;
   node_service_method: string;
   node_service_port: number;
 }
@@ -54,6 +55,14 @@ interface NodeDetailResponse {
   node_method: string;
   node_port: number;
   services: NodeService[];
+}
+
+interface TopologyNode extends Node {
+  node_id?: number | string; // Tambahkan properti dari DB kamu
+}
+
+interface TopologyNode extends ReactFlowNode {
+  node_id?: number | string;
 }
 
 // --- 2. GLOBAL CONFIG ---
@@ -96,8 +105,12 @@ function TopologyEditor() {
 
   // --- Memos ---
   const activeNodeData = useMemo(() => {
-    // Cari berdasarkan node_id, bukan id (react_id)
-    return nodes.find((n: any) => n.node_id?.toString() === selectedNodeId)?.data;
+    // Cari berdasarkan node_id database
+    const selectedNode = nodes.find((n: TopologyNode) =>
+      n.node_id?.toString() === selectedNodeId
+    );
+
+    return selectedNode?.data;
   }, [nodes, selectedNodeId]);
 
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
@@ -133,11 +146,11 @@ function TopologyEditor() {
   const servicePayload = useMemo<MonitoringTarget[]>(() => {
     if (!nodeDetail?.services) return [];
     return nodeDetail.services.map(svc => ({
-      ip: svc.node_service_ip,
+      ip: svc.node_service_ip_address,
       port: svc.node_service_port
     }));
   }, [nodeDetail]);
-
+ 
   // SWR Hook untuk mendapatkan status real-time service dari api/status
   const { data: serviceStatusData } = useSWR<StatusApiResponse>(
     isDetailOpen && servicePayload.length > 0 ? ['/api/status', servicePayload] : null,
@@ -145,23 +158,24 @@ function TopologyEditor() {
     { refreshInterval: 5000 }
   );
 
-  // --- Callbacks ---
-  const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
-    // Ambil node_id dari database yang dikirim oleh BE
-    const dbId = node.node_id;
+// --- Callbacks ---
+const onNodeClick = useCallback((_: React.MouseEvent, node: TopologyNode) => {
+  // TypeScript sekarang tahu node memiliki properti node_id
+  const dbId = node.node_id;
 
-    if (!dbId) {
-      // Jika node_id tidak ada, berarti ini node baru yang belum di-save
-      setNotification({
-        message: 'Simpan perubahan terlebih dahulu untuk melihat detail node baru!',
-        type: 'error'
-      });
-      return;
-    }
+  if (!dbId) {
+    // Jika node_id tidak ada, berarti ini node baru yang belum di-save ke DB
+    setNotification({
+      message: 'Simpan perubahan terlebih dahulu untuk melihat detail node baru!',
+      type: 'error'
+    });
+    return;
+  }
 
-    setSelectedNodeId(dbId.toString()); // Simpan ID database ke state
-    setIsDetailOpen(true);
-  }, []);
+  // Konversi ke string karena setSelectedNodeId biasanya menggunakan string untuk URL API
+  setSelectedNodeId(dbId.toString()); 
+  setIsDetailOpen(true);
+}, [setNotification]); // Tambahkan setNotification ke dependency array jika perlu
 
   const onNodesChangeWithIndicator = useCallback((changes: NodeChange[]) => {
     const isActuallyChanging = changes.some((c) =>
@@ -410,6 +424,13 @@ function TopologyEditor() {
                 </div>
               </div>
 
+              {/* Deskripsi */}
+              <div className="px-6 py-4 border-b border-base-300 bg-base-50 ">
+                <p className="text-sm opacity-80 italic mb-6">
+                  {nodeDetail?.node_description || 'Tidak ada deskripsi tersedia untuk node ini.'}
+                </p>
+              </div>
+
               <div className="p-6 space-y-6">
                 {/* Latency & Method Stats */}
                 <div className="grid grid-cols-2 gap-4">
@@ -442,7 +463,7 @@ function TopologyEditor() {
                     ) : nodeDetail?.services && nodeDetail.services.length > 0 ? (
                       // --- TAMPILKAN LIST JIKA ADA SERVICE ---
                       nodeDetail.services.map((svc) => {
-                        const targetKey = `${svc.node_service_ip}:${svc.node_service_port}`;
+                        const targetKey = `${svc.node_service_ip_address}:${svc.node_service_port}`;
                         const liveStatus = serviceStatusData?.nodes.find(n => n.target === targetKey);
                         const isSvcOnline = liveStatus?.status === 'online';
 

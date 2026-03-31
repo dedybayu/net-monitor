@@ -46,7 +46,7 @@ export async function GET(req: Request, { params }: RouteParams) {
         node_service_id: svc.node_service_id,
         node_service_name: svc.node_service_name,
         node_service_description: svc.node_service_description,
-        node_service_ip: node.node_ip_address, // Diambil dari model node induk
+        node_service_ip_address: svc.node_service_ip_address, // Diambil dari model node induk
         node_service_method: svc.node_service_method,
         node_service_port: svc.node_service_port,
       })),

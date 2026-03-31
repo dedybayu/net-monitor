@@ -98,8 +98,9 @@ model NodeService {
   node_id                  Int
   node_service_name        String
   node_service_description String?
+  node_service_ip_address  String
   node_service_method      String
-  node_service_port        Int
+  node_service_port        Int?
   created_at               DateTime @default(now())
   updated_at               DateTime @updatedAt
   node                     Node     @relation(fields: [node_id], references: [node_id])
