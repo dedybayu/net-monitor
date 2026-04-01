@@ -12,6 +12,7 @@ interface NodeDetailModalProps {
   isDetailLoading: boolean;
   serviceStatusData: StatusApiResponse | undefined;
   onServiceAdded: () => void;
+  onNodeDeleted: () => void;   // close modal + refresh canvas after node deleted
   onClose: () => void;
 }
 
@@ -23,12 +24,16 @@ interface ServiceForm {
   port: string;
 }
 
-const EMPTY_FORM: ServiceForm = {
-  name: '',
-  description: '',
-  ip: '',
-  method: 'ICMP',
-  port: '',
+interface NodeForm {
+  label: string;
+  description: string;
+  ip: string;
+  method: 'ICMP' | 'TCP';
+  port: string;
+}
+
+const EMPTY_SERVICE_FORM: ServiceForm = {
+  name: '', description: '', ip: '', method: 'ICMP', port: '',
 };
 
 const WORKSPACE_ID = 1;
@@ -46,109 +51,18 @@ function svcToForm(svc: NodeDetailResponse['services'][number]): ServiceForm {
   };
 }
 
-// ── Shared form fields UI ──────────────────────────────────────────────────
-
-function ServiceFormFields({
-  form,
-  set,
-}: {
-  form: ServiceForm;
-  set: (field: keyof ServiceForm, value: string) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      {/* Row 1: name + description */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="form-control">
-          <label className="label py-0 mb-1">
-            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">
-              Nama Service
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. HTTP, MySQL"
-            className="input input-bordered input-sm w-full text-xs focus:input-primary"
-            value={form.name}
-            onChange={(e) => set('name', e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-control">
-          <label className="label py-0 mb-1">
-            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">
-              Deskripsi
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="Opsional"
-            className="input input-bordered input-sm w-full text-xs focus:input-primary"
-            value={form.description}
-            onChange={(e) => set('description', e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Row 2: IP + method + port */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="form-control">
-          <label className="label py-0 mb-1">
-            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">
-              IP Address
-            </span>
-          </label>
-          <input
-            type="text"
-            placeholder="192.168.1.1"
-            className="input input-bordered input-sm w-full text-xs font-mono focus:input-primary"
-            value={form.ip}
-            onChange={(e) => set('ip', e.target.value)}
-            required
-          />
-        </div>
-        <div className="form-control">
-          <label className="label py-0 mb-1">
-            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">
-              Metode
-            </span>
-          </label>
-          <select
-            className="select select-bordered select-sm w-full text-xs"
-            value={form.method}
-            onChange={(e) => {
-              set('method', e.target.value as 'ICMP' | 'TCP');
-              if (e.target.value === 'ICMP') set('port', '');
-            }}
-          >
-            <option value="ICMP">ICMP (Ping)</option>
-            <option value="TCP">TCP (Port)</option>
-          </select>
-        </div>
-        <div className="form-control">
-          <label className="label py-0 mb-1">
-            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">
-              Port
-            </span>
-          </label>
-          <input
-            type="number"
-            placeholder={form.method === 'TCP' ? '80' : '—'}
-            className="input input-bordered input-sm w-full text-xs font-mono disabled:opacity-30"
-            value={form.port}
-            onChange={(e) => set('port', e.target.value)}
-            disabled={form.method === 'ICMP'}
-            required={form.method === 'TCP'}
-            min={1}
-            max={65535}
-          />
-        </div>
-      </div>
-    </div>
-  );
+function nodeToForm(node: NodeDetailResponse): NodeForm {
+  const hasPort = node.node_port > 0;
+  return {
+    label: node.node_label,
+    description: node.node_description || '',
+    ip: node.node_ip_address,
+    method: node.node_method as 'ICMP' | 'TCP',
+    port: hasPort ? String(node.node_port) : '',
+  };
 }
 
-// ── Error banner ───────────────────────────────────────────────────────────
+// ── Shared UI atoms ────────────────────────────────────────────────────────
 
 function ErrorBanner({ message }: { message: string }) {
   return (
@@ -161,7 +75,194 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-// ── Sub-component: service row (view mode + edit mode) ─────────────────────
+// ── Shared service form fields ─────────────────────────────────────────────
+
+function ServiceFormFields({
+  form,
+  set,
+}: {
+  form: ServiceForm;
+  set: (field: keyof ServiceForm, value: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Nama Service</span>
+          </label>
+          <input type="text" placeholder="e.g. HTTP, MySQL"
+            className="input input-bordered input-sm w-full text-xs focus:input-primary"
+            value={form.name} onChange={(e) => set('name', e.target.value)} required />
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Deskripsi</span>
+          </label>
+          <input type="text" placeholder="Opsional"
+            className="input input-bordered input-sm w-full text-xs focus:input-primary"
+            value={form.description} onChange={(e) => set('description', e.target.value)} />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">IP Address</span>
+          </label>
+          <input type="text" placeholder="192.168.1.1"
+            className="input input-bordered input-sm w-full text-xs font-mono focus:input-primary"
+            value={form.ip} onChange={(e) => set('ip', e.target.value)} required />
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Metode</span>
+          </label>
+          <select className="select select-bordered select-sm w-full text-xs" value={form.method}
+            onChange={(e) => { set('method', e.target.value as 'ICMP' | 'TCP'); if (e.target.value === 'ICMP') set('port', ''); }}>
+            <option value="ICMP">ICMP (Ping)</option>
+            <option value="TCP">TCP (Port)</option>
+          </select>
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Port</span>
+          </label>
+          <input type="number" placeholder={form.method === 'TCP' ? '80' : '—'}
+            className="input input-bordered input-sm w-full text-xs font-mono disabled:opacity-30"
+            value={form.port} onChange={(e) => set('port', e.target.value)}
+            disabled={form.method === 'ICMP'} required={form.method === 'TCP'} min={1} max={65535} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Node edit form (shown inside the header area) ──────────────────────────
+
+function NodeEditForm({
+  nodeId,
+  nodeDetail,
+  onSuccess,
+  onCancel,
+}: {
+  nodeId: string;
+  nodeDetail: NodeDetailResponse;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState<NodeForm>(() => nodeToForm(nodeDetail));
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const set = (field: keyof NodeForm, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/workspace/${WORKSPACE_ID}/nodes/${nodeId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label: form.label,
+            description: form.description,
+            ip: form.ip,
+            method: form.method,
+            port: form.method === 'TCP' ? form.port : 0,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error('Gagal mengupdate node');
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [form, nodeId, onSuccess]);
+
+  return (
+    <form onSubmit={handleSubmit} className="p-6 bg-warning/5 border-b border-warning/20 space-y-4">
+      {/* Edit header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded-md bg-warning/20 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-widest text-warning">Edit Node</span>
+        </div>
+        <button type="button" onClick={onCancel}
+          className="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100">✕</button>
+      </div>
+
+      {/* Label + description */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Label</span>
+          </label>
+          <input type="text" className="input input-bordered input-sm w-full text-xs focus:input-warning"
+            value={form.label} onChange={(e) => set('label', e.target.value)} required />
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Deskripsi</span>
+          </label>
+          <input type="text" placeholder="Opsional"
+            className="input input-bordered input-sm w-full text-xs focus:input-warning"
+            value={form.description} onChange={(e) => set('description', e.target.value)} />
+        </div>
+      </div>
+
+      {/* IP + method + port */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">IP Address</span>
+          </label>
+          <input type="text" className="input input-bordered input-sm w-full text-xs font-mono focus:input-warning"
+            value={form.ip} onChange={(e) => set('ip', e.target.value)} required />
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Metode</span>
+          </label>
+          <select className="select select-bordered select-sm w-full text-xs" value={form.method}
+            onChange={(e) => { set('method', e.target.value as 'ICMP' | 'TCP'); if (e.target.value === 'ICMP') set('port', ''); }}>
+            <option value="ICMP">ICMP (Ping)</option>
+            <option value="TCP">TCP (Port)</option>
+          </select>
+        </div>
+        <div className="form-control">
+          <label className="label py-0 mb-1">
+            <span className="label-text text-[10px] font-black uppercase tracking-widest opacity-50">Port</span>
+          </label>
+          <input type="number" placeholder={form.method === 'TCP' ? '80' : '—'}
+            className="input input-bordered input-sm w-full text-xs font-mono disabled:opacity-30"
+            value={form.port} onChange={(e) => set('port', e.target.value)}
+            disabled={form.method === 'ICMP'} required={form.method === 'TCP'} min={1} max={65535} />
+        </div>
+      </div>
+
+      {error && <ErrorBanner message={error} />}
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="btn btn-ghost btn-sm text-xs">Batal</button>
+        <button type="submit" disabled={isSaving} className="btn btn-warning btn-sm text-xs px-6 font-bold">
+          {isSaving ? <span className="loading loading-spinner loading-xs"></span> : 'Simpan Node'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ── Service row (view + edit-in-place) ─────────────────────────────────────
 
 function ServiceRow({
   svc,
@@ -184,12 +285,12 @@ function ServiceRow({
   const set = (field: keyof ServiceForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  // Live status
   const ip = svc.node_service_ip_address?.trim();
   const port = svc.node_service_port;
   const hasPort = port && port > 0;
-  const targetKey = hasPort ? `${ip}:${port}` : ip;
-  const liveStatus = serviceStatusData?.nodes.find((n) => n.target === targetKey);
+  const liveStatus = serviceStatusData?.nodes.find(
+    (n) => n.target === (hasPort ? `${ip}:${port}` : ip)
+  );
   const isOnline = liveStatus?.status === 'online';
 
   const handleSave = useCallback(async (e: React.FormEvent) => {
@@ -203,11 +304,8 @@ function ServiceRow({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: form.name,
-            description: form.description,
-            ip: form.ip,
-            method: form.method,
-            port: form.method === 'TCP' ? form.port : undefined,
+            name: form.name, description: form.description, ip: form.ip,
+            method: form.method, port: form.method === 'TCP' ? form.port : undefined,
           }),
         }
       );
@@ -223,7 +321,6 @@ function ServiceRow({
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
-    setError(null);
     try {
       const res = await fetch(
         `/api/workspace/${WORKSPACE_ID}/nodes/${nodeId}/services/${svc.node_service_id}`,
@@ -238,18 +335,10 @@ function ServiceRow({
     }
   }, [nodeId, svc.node_service_id, onMutated]);
 
-  const handleCancelEdit = () => {
-    setForm(svcToForm(svc)); // reset to last saved values
-    setError(null);
-    setIsEditing(false);
-    setDeleteConfirm(false);
-  };
-
-  // ── EDIT MODE ────────────────────────────────────────────────────────────
+  // ── Edit mode ──────────────────────────────────────────────────────────
   if (isEditing) {
     return (
       <div className="rounded-2xl border border-warning/30 bg-warning/5 overflow-hidden">
-        {/* Edit header bar */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-warning/15 bg-warning/10">
           <div className="flex items-center gap-2">
             <div className="h-5 w-5 rounded-md bg-warning/20 flex items-center justify-center">
@@ -261,76 +350,35 @@ function ServiceRow({
               Edit: {svc.node_service_name}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={handleCancelEdit}
-            className="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100"
-          >
-            ✕
-          </button>
+          <button type="button" onClick={() => { setForm(svcToForm(svc)); setError(null); setIsEditing(false); setDeleteConfirm(false); }}
+            className="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100">✕</button>
         </div>
-
         <form onSubmit={handleSave} className="p-4 space-y-3">
           <ServiceFormFields form={form} set={set} />
-
           {error && <ErrorBanner message={error} />}
-
-          {/* Delete confirmation inline */}
           {deleteConfirm ? (
             <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-error/10 border border-error/25">
               <span className="text-[11px] font-bold text-error">Hapus service ini?</span>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirm(false)}
-                  className="btn btn-ghost btn-xs"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="btn btn-error btn-xs font-bold"
-                >
-                  {isDeleting
-                    ? <span className="loading loading-spinner loading-xs"></span>
-                    : 'Hapus'
-                  }
+                <button type="button" onClick={() => setDeleteConfirm(false)} className="btn btn-ghost btn-xs">Batal</button>
+                <button type="button" onClick={handleDelete} disabled={isDeleting} className="btn btn-error btn-xs font-bold">
+                  {isDeleting ? <span className="loading loading-spinner loading-xs"></span> : 'Hapus'}
                 </button>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between pt-1">
-              {/* Delete trigger — left side */}
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(true)}
-                className="btn btn-ghost btn-xs text-error hover:bg-error/10 gap-1 font-bold"
-              >
+              <button type="button" onClick={() => setDeleteConfirm(true)}
+                className="btn btn-ghost btn-xs text-error hover:bg-error/10 gap-1 font-bold">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 Hapus
               </button>
-              {/* Save / cancel — right side */}
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="btn btn-ghost btn-sm text-xs"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="btn btn-warning btn-sm text-xs px-6 font-bold"
-                >
-                  {isSaving
-                    ? <span className="loading loading-spinner loading-xs"></span>
-                    : 'Simpan'
-                  }
+                <button type="button" onClick={() => { setForm(svcToForm(svc)); setIsEditing(false); }} className="btn btn-ghost btn-sm text-xs">Batal</button>
+                <button type="submit" disabled={isSaving} className="btn btn-warning btn-sm text-xs px-6 font-bold">
+                  {isSaving ? <span className="loading loading-spinner loading-xs"></span> : 'Simpan'}
                 </button>
               </div>
             </div>
@@ -340,53 +388,34 @@ function ServiceRow({
     );
   }
 
-  // ── VIEW MODE ────────────────────────────────────────────────────────────
+  // ── View mode ──────────────────────────────────────────────────────────
   return (
-    <div
-      className={`group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${isOnline ? 'bg-success/5 border-success/20' : 'bg-error/5 border-error/20'
-        }`}
-    >
+    <div className={`group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${isOnline ? 'bg-success/5 border-success/20' : 'bg-error/5 border-error/20'
+      }`}>
       <div className="flex items-center gap-4">
-        {/* Port badge */}
-        <div
-          className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-[10px] border transition-colors ${isOnline
-              ? 'bg-success/10 text-success border-success/20'
-              : 'bg-error/10 text-error border-error/20'
-            }`}
-        >
+        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-[10px] border transition-colors ${isOnline ? 'bg-success/10 text-success border-success/20' : 'bg-error/10 text-error border-error/20'
+          }`}>
           {hasPort ? port : 'PING'}
         </div>
-
-        {/* Name + ip */}
         <div className="flex flex-col">
-          <h4 className="text-sm font-bold opacity-90 leading-none">
-            {svc.node_service_name}
-          </h4>
+          <h4 className="text-sm font-bold opacity-90 leading-none">{svc.node_service_name}</h4>
           <span className="text-[10px] font-mono font-medium opacity-60 bg-base-300/50 px-1.5 py-0.5 rounded mt-1.5">
             {ip} ({hasPort ? 'TCP' : 'ICMP'})
           </span>
         </div>
       </div>
-
       <div className="flex items-center gap-3">
-        {/* Live status */}
         <div className="flex flex-col items-end gap-1">
-          <div
-            className={`badge ${isOnline ? 'badge-success' : 'badge-error'} badge-xs font-black px-2 py-2`}
-          >
+          <div className={`badge ${isOnline ? 'badge-success' : 'badge-error'} badge-xs font-black px-2 py-2`}>
             {isOnline ? 'UP' : 'DOWN'}
           </div>
           <span className={`text-[10px] font-mono font-bold ${isOnline ? 'text-success' : 'text-error'}`}>
             {liveStatus?.latency || 'timeout'}
           </span>
         </div>
-
-        {/* Edit button — visible on hover */}
-        <button
-          onClick={() => setIsEditing(true)}
+        <button onClick={() => setIsEditing(true)}
           className="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-          title="Edit service"
-        >
+          title="Edit service">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
@@ -396,21 +425,14 @@ function ServiceRow({
   );
 }
 
-// ── Sub-component: add-service form ───────────────────────────────────────
+// ── Add-service form ───────────────────────────────────────────────────────
 
 function AddServiceForm({
-  nodeId,
-  nodeIp,
-  onSuccess,
-  onCancel,
-}: {
-  nodeId: string;
-  nodeIp: string;
-  onSuccess: () => void;
-  onCancel: () => void;
-}) {
+  nodeId, nodeIp, onSuccess, onCancel,
+}: { nodeId: string; nodeIp: string; onSuccess: () => void; onCancel: () => void; }) {
+
   const [form, setForm] = useState<ServiceForm>(() => ({
-    ...EMPTY_FORM,
+    ...EMPTY_SERVICE_FORM,
     ip: nodeIp || '', // Mengisi default IP
   }));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -424,20 +446,14 @@ function AddServiceForm({
     setIsSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/workspace/${WORKSPACE_ID}/nodes/${nodeId}/services`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: form.name,
-            description: form.description,
-            ip: form.ip,
-            method: form.method,
-            port: form.method === 'TCP' ? form.port : undefined,
-          }),
-        }
-      );
+      const res = await fetch(`/api/workspace/${WORKSPACE_ID}/nodes/${nodeId}/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name, description: form.description, ip: form.ip,
+          method: form.method, port: form.method === 'TCP' ? form.port : undefined,
+        }),
+      });
       if (!res.ok) throw new Error('Gagal menambahkan service');
       onSuccess();
     } catch (err) {
@@ -449,7 +465,6 @@ function AddServiceForm({
 
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/5 overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-primary/10 bg-primary/10">
         <div className="flex items-center gap-2">
           <div className="h-5 w-5 rounded-md bg-primary/20 flex items-center justify-center">
@@ -457,35 +472,17 @@ function AddServiceForm({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
             </svg>
           </div>
-          <span className="text-[11px] font-black uppercase tracking-widest text-primary">
-            Tambah Service Baru
-          </span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-primary">Tambah Service Baru</span>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100"
-        >
-          ✕
-        </button>
+        <button type="button" onClick={onCancel} className="btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100">✕</button>
       </div>
-
       <form onSubmit={handleSubmit} className="p-4 space-y-3">
         <ServiceFormFields form={form} set={set} />
         {error && <ErrorBanner message={error} />}
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onCancel} className="btn btn-ghost btn-sm text-xs">
-            Batal
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn btn-primary btn-sm text-xs px-6 font-bold"
-          >
-            {isSubmitting
-              ? <span className="loading loading-spinner loading-xs"></span>
-              : 'Simpan Service'
-            }
+          <button type="button" onClick={onCancel} className="btn btn-ghost btn-sm text-xs">Batal</button>
+          <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm text-xs px-6 font-bold">
+            {isSubmitting ? <span className="loading loading-spinner loading-xs"></span> : 'Simpan Service'}
           </button>
         </div>
       </form>
@@ -502,14 +499,42 @@ export function NodeDetailModal({
   isDetailLoading,
   serviceStatusData,
   onServiceAdded,
+  onNodeDeleted,
   onClose,
 }: NodeDetailModalProps) {
+  const [isEditingNode, setIsEditingNode] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
+  const [deleteNodeConfirm, setDeleteNodeConfirm] = useState(false);
+  const [isDeletingNode, setIsDeletingNode] = useState(false);
+  const [deleteNodeError, setDeleteNodeError] = useState<string | null>(null);
 
   const handleServiceAdded = useCallback(() => {
     setIsAddingService(false);
     onServiceAdded();
   }, [onServiceAdded]);
+
+  const handleNodeEdited = useCallback(() => {
+    setIsEditingNode(false);
+    onServiceAdded(); // revalidates full node detail
+  }, [onServiceAdded]);
+
+  const handleDeleteNode = useCallback(async () => {
+    if (!selectedNodeId) return;
+    setIsDeletingNode(true);
+    setDeleteNodeError(null);
+    try {
+      const res = await fetch(
+        `/api/workspace/${WORKSPACE_ID}/nodes/${selectedNodeId}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error('Gagal menghapus node');
+      onNodeDeleted();
+    } catch (err) {
+      setDeleteNodeError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      setIsDeletingNode(false);
+      setDeleteNodeConfirm(false);
+    }
+  }, [selectedNodeId, onNodeDeleted]);
 
   const hasServices = nodeDetail?.services && nodeDetail.services.length > 0;
 
@@ -517,59 +542,72 @@ export function NodeDetailModal({
     <div className="modal modal-open">
       <div className="modal-box w-11/12 max-w-2xl border border-base-300 shadow-2xl bg-base-100 p-0 overflow-hidden">
 
-        {/* Header */}
-        <div className={`p-6 ${nodeDetail ? 'bg-base-200' : 'animate-pulse bg-base-300'}`}>
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className="font-black text-2xl uppercase tracking-tighter">
-                  {nodeDetail?.node_label || activeNodeData?.label || 'Loading...'}
-                </h3>
-                <div
-                  className={`badge ${activeNodeData?.status === 'online' ? 'badge-success' : 'badge-error'
-                    } badge-sm font-black`}
-                >
-                  {activeNodeData?.status?.toUpperCase()}
+        {/* ── Header (view) ── */}
+        {!isEditingNode && (
+          <div className={`p-6 ${nodeDetail ? 'bg-base-200' : 'animate-pulse bg-base-300'}`}>
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-black text-2xl uppercase tracking-tighter">
+                    {nodeDetail?.node_label || activeNodeData?.label || 'Loading...'}
+                  </h3>
+                  <div className={`badge ${activeNodeData?.status === 'online' ? 'badge-success' : 'badge-error'} badge-sm font-black`}>
+                    {activeNodeData?.status?.toUpperCase()}
+                  </div>
                 </div>
+                <p className="text-xs opacity-60 font-mono mt-1">
+                  Target: {nodeDetail?.node_ip_address}
+                  {nodeDetail?.node_port !== 0 && `:${nodeDetail?.node_port}`}
+                </p>
               </div>
-              <p className="text-xs opacity-60 font-mono mt-1">
-                Target: {nodeDetail?.node_ip_address}
-                {nodeDetail?.node_port !== 0 && `:${nodeDetail?.node_port}`}
-              </p>
+              <div className="flex items-center gap-1">
+                {/* Edit node button */}
+                {nodeDetail && (
+                  <button onClick={() => setIsEditingNode(true)}
+                    className="btn btn-ghost btn-sm btn-circle opacity-40 hover:opacity-100 transition-opacity"
+                    title="Edit node">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
+                <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">✕</button>
+              </div>
             </div>
-            <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost">✕</button>
           </div>
-        </div>
+        )}
+
+        {/* ── Header (edit node form) ── */}
+        {isEditingNode && nodeDetail && selectedNodeId && (
+          <NodeEditForm
+            nodeId={selectedNodeId}
+            nodeDetail={nodeDetail}
+            onSuccess={handleNodeEdited}
+            onCancel={() => setIsEditingNode(false)}
+          />
+        )}
 
         {/* Description */}
-        <div className="px-6 py-4 border-b border-base-300">
-          <p className="text-sm opacity-80 italic">
-            {nodeDetail?.node_description || 'Tidak ada deskripsi tersedia untuk node ini.'}
-          </p>
-        </div>
+        {!isEditingNode && (
+          <div className="px-6 py-4 border-b border-base-300">
+            <p className="text-sm opacity-80 italic">
+              {nodeDetail?.node_description || 'Tidak ada deskripsi tersedia untuk node ini.'}
+            </p>
+          </div>
+        )}
 
         <div className="p-6 space-y-6">
-
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-base-200 rounded-2xl p-4 border border-base-300 shadow-inner flex flex-col items-center justify-center">
-              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-1">
-                Node Latency
-              </span>
-              <span
-                className={`text-3xl font-black font-mono ${activeNodeData?.status === 'online' ? 'text-primary' : 'text-error'
-                  }`}
-              >
+              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-1">Node Latency</span>
+              <span className={`text-3xl font-black font-mono ${activeNodeData?.status === 'online' ? 'text-primary' : 'text-error'}`}>
                 {activeNodeData?.latency || '...'}
               </span>
             </div>
             <div className="bg-base-200 rounded-2xl p-4 border border-base-300 shadow-inner flex flex-col items-center justify-center">
-              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-1">
-                Check Method
-              </span>
-              <span className="text-xl font-black uppercase">
-                {nodeDetail?.node_method || '---'}
-              </span>
+              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-1">Check Method</span>
+              <span className="text-xl font-black uppercase">{nodeDetail?.node_method || '---'}</span>
             </div>
           </div>
 
@@ -581,16 +619,12 @@ export function NodeDetailModal({
                   Active Services Monitoring
                 </span>
                 {hasServices && (
-                  <span className="badge badge-outline badge-xs animate-pulse text-primary font-bold">
-                    LIVE
-                  </span>
+                  <span className="badge badge-outline badge-xs animate-pulse text-primary font-bold">LIVE</span>
                 )}
               </div>
               {!isAddingService && (
-                <button
-                  onClick={() => setIsAddingService(true)}
-                  className="btn btn-ghost btn-xs gap-1.5 text-primary font-bold hover:bg-primary/10 rounded-lg"
-                >
+                <button onClick={() => setIsAddingService(true)}
+                  className="btn btn-ghost btn-xs gap-1.5 text-primary font-bold hover:bg-primary/10 rounded-lg">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                   </svg>
@@ -599,19 +633,12 @@ export function NodeDetailModal({
               )}
             </div>
 
-            {/* Add-service form */}
             {isAddingService && selectedNodeId && (
               <div className="mb-4">
-                <AddServiceForm
-                  nodeId={selectedNodeId}
-                  nodeIp={nodeDetail?.node_ip_address || ''}
-                  onSuccess={handleServiceAdded}
-                  onCancel={() => setIsAddingService(false)}
-                />
+                <AddServiceForm nodeId={selectedNodeId} nodeIp={nodeDetail!.node_ip_address} onSuccess={handleServiceAdded} onCancel={() => setIsAddingService(false)} />
               </div>
             )}
 
-            {/* Service list */}
             <div className="grid grid-cols-1 gap-3 max-h-72 overflow-y-auto pr-1">
               {isDetailLoading ? (
                 <div className="flex justify-center p-10">
@@ -619,13 +646,8 @@ export function NodeDetailModal({
                 </div>
               ) : hasServices ? (
                 nodeDetail!.services.map((svc) => (
-                  <ServiceRow
-                    key={svc.node_service_id}
-                    svc={svc}
-                    nodeId={selectedNodeId!}
-                    serviceStatusData={serviceStatusData}
-                    onMutated={onServiceAdded}
-                  />
+                  <ServiceRow key={svc.node_service_id} svc={svc}
+                    nodeId={selectedNodeId!} serviceStatusData={serviceStatusData} onMutated={onServiceAdded} />
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 px-6 bg-base-200/50 rounded-3xl border-2 border-dashed border-base-300">
@@ -634,17 +656,13 @@ export function NodeDetailModal({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v4M7 7h10" />
                     </svg>
                   </div>
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] opacity-40 text-center">
-                    No Services Registered
-                  </h4>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] opacity-40 text-center">No Services Registered</h4>
                   <p className="text-[10px] opacity-30 text-center mt-2 max-w-[200px] leading-relaxed">
                     This device is monitored via its main target ({nodeDetail?.node_method}).
                   </p>
                   {!isAddingService && (
-                    <button
-                      onClick={() => setIsAddingService(true)}
-                      className="btn btn-ghost btn-xs mt-4 text-primary font-bold hover:bg-primary/10"
-                    >
+                    <button onClick={() => setIsAddingService(true)}
+                      className="btn btn-ghost btn-xs mt-4 text-primary font-bold hover:bg-primary/10">
                       + Configure Services
                     </button>
                   )}
@@ -654,14 +672,43 @@ export function NodeDetailModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-6 bg-base-200/50 border-t border-base-300 flex justify-end">
-          <button
-            onClick={onClose}
-            className="btn btn-primary rounded-xl px-10 font-bold uppercase text-xs"
-          >
-            Close Detail
-          </button>
+        {/* ── Footer ── */}
+        <div className="p-6 bg-base-200/50 border-t border-base-300">
+          {/* Delete node confirmation */}
+          {deleteNodeConfirm ? (
+            <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-error/10 border border-error/25 mb-4">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black text-error uppercase tracking-wide">Hapus node ini?</span>
+                <span className="text-[10px] opacity-60 mt-0.5">Semua service akan ikut terhapus.</span>
+              </div>
+              <div className="flex gap-2">
+                {deleteNodeError && <span className="text-[10px] text-error font-bold self-center">{deleteNodeError}</span>}
+                <button onClick={() => { setDeleteNodeConfirm(false); setDeleteNodeError(null); }}
+                  className="btn btn-ghost btn-xs">Batal</button>
+                <button onClick={handleDeleteNode} disabled={isDeletingNode} className="btn btn-error btn-xs font-bold px-4">
+                  {isDeletingNode ? <span className="loading loading-spinner loading-xs"></span> : 'Hapus Node'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex justify-between items-center">
+            {/* Delete node trigger */}
+            <button
+              onClick={() => setDeleteNodeConfirm(true)}
+              disabled={deleteNodeConfirm || !nodeDetail}
+              className="btn btn-ghost btn-sm text-error hover:bg-error/10 gap-1.5 font-bold disabled:opacity-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Hapus Node
+            </button>
+
+            <button onClick={onClose} className="btn btn-primary rounded-xl px-10 font-bold uppercase text-xs">
+              Close Detail
+            </button>
+          </div>
         </div>
       </div>
       <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose}></div>

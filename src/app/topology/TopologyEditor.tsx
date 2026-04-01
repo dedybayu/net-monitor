@@ -108,6 +108,14 @@ export function TopologyEditor() {
     [setNodes, setHasChanges]
   );
 
+  const handleNodeDeleted = useCallback(() => {
+    // Remove deleted node from canvas immediately, then close modal
+    setNodes((nds) => nds.filter((n: TopologyNode) => n.node_id?.toString() !== selectedNodeId));
+    setHasChanges(true);
+    setIsDetailOpen(false);
+    setSelectedNodeId(null);
+  }, [selectedNodeId, setNodes, setHasChanges]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-base-200 text-base-content">
@@ -210,6 +218,7 @@ export function TopologyEditor() {
             isDetailLoading={isDetailLoading}
             serviceStatusData={serviceStatusData}
             onServiceAdded={revalidateDetail}
+            onNodeDeleted={handleNodeDeleted}
             onClose={() => setIsDetailOpen(false)}
           />
         )}

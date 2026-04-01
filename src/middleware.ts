@@ -37,7 +37,7 @@ export const config = {
   // Tambahkan /login dan /register ke dalam matcher agar diproses middleware
   matcher: [
     "/dashboard/:path*",
-    "/info/:path*", 
+    "/info/:path*",
     "/login", 
     "/register", 
     "/topology",
