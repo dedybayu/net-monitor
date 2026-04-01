@@ -11,13 +11,16 @@ interface UseServiceStatusProps {
 }
 
 export function useServiceStatus({ selectedNodeId, isDetailOpen }: UseServiceStatusProps) {
-  const { data: nodeDetail, isLoading: isDetailLoading } = useSWR<NodeDetailResponse>(
+  const detailKey =
     isDetailOpen && selectedNodeId
       ? `/api/workspace/${WORKSPACE_ID}/nodes/${selectedNodeId}`
-      : null,
-    detailFetcher,
-    { refreshInterval: 5000 }
-  );
+      : null;
+
+  const {
+    data: nodeDetail,
+    isLoading: isDetailLoading,
+    mutate: revalidateDetail,
+  } = useSWR<NodeDetailResponse>(detailKey, detailFetcher, { refreshInterval: 5000 });
 
   const servicePayload = useMemo<MonitoringTarget[]>(() => {
     if (!nodeDetail?.services) return [];
@@ -33,5 +36,5 @@ export function useServiceStatus({ selectedNodeId, isDetailOpen }: UseServiceSta
     { refreshInterval: 5000 }
   );
 
-  return { nodeDetail, isDetailLoading, serviceStatusData };
+  return { nodeDetail, isDetailLoading, serviceStatusData, revalidateDetail };
 }

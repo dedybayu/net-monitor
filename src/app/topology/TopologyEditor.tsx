@@ -42,7 +42,7 @@ export function TopologyEditor() {
 
   useNodeStatus({ nodes, setNodes });
 
-  const { nodeDetail, isDetailLoading, serviceStatusData } = useServiceStatus({
+  const { nodeDetail, isDetailLoading, serviceStatusData, revalidateDetail } = useServiceStatus({
     selectedNodeId,
     isDetailOpen,
   });
@@ -204,10 +204,12 @@ export function TopologyEditor() {
 
         {isDetailOpen && (
           <NodeDetailModal
+            selectedNodeId={selectedNodeId}
             activeNodeData={activeNodeData}
             nodeDetail={nodeDetail}
             isDetailLoading={isDetailLoading}
             serviceStatusData={serviceStatusData}
+            onServiceAdded={revalidateDetail}
             onClose={() => setIsDetailOpen(false)}
           />
         )}
