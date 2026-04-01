@@ -209,11 +209,11 @@ function Feature({ title, desc, icon }: { title: string; desc: string; icon: str
   )
 }
 
-// Sub-komponen Sosmed
-function SocialIcon({ platform }: { platform: string }) {
-  return (
-    <a href="#" className="btn btn-sm btn-circle btn-ghost border border-base-300">
-      <span className="text-[10px]">{platform.charAt(0)}</span>
-    </a>
-  )
-}
+// // Sub-komponen Sosmed
+// function SocialIcon({ platform }: { platform: string }) {
+//   return (
+//     <a href="#" className="btn btn-sm btn-circle btn-ghost border border-base-300">
+//       <span className="text-[10px]">{platform.charAt(0)}</span>
+//     </a>
+//   )
+// }
