@@ -52,7 +52,7 @@ export default function MonitorPage() {
   );
 
   // 2. AMBIL DEVICES
-  const { data: devices, error: deviceError } = useSWR<Device[]>(
+  const { data: devices } = useSWR<Device[]>(
     wsData ? `/api/workspaces/${workspaceIdInt}/nodes` : null,
     getFetcher
   );
