@@ -46,7 +46,8 @@ function TopologyEditorInner(props: {
   const { screenToFlowPosition } = useReactFlow();
 
   // ── Hooks ────────────────────────────────────────────────────────────────
-  const { isSaving, hasChanges, setHasChanges, notification, setNotification, save } =
+  // ✅ Gunakan `refresh` dari hook — tidak perlu buat loadTopology sendiri
+  const { isSaving, hasChanges, setHasChanges, notification, setNotification, save, refresh } =
     useTopologyLoader({ workspaceId: workspaceIdInt, setNodes, setEdges, nodes, edges });
 
   useNodeStatus({ nodes, setNodes });
@@ -124,41 +125,19 @@ function TopologyEditorInner(props: {
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setHasChanges]);
 
-  // Tambahkan fungsi refresh di tingkat komponen utama
-  const loadTopology = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/workspaces/${workspaceIdInt}/topology`);
-      const data = await res.json();
-      if (data.nodes) {
-        setNodes(data.nodes);
-        setEdges(data.edges || []);
-        setHasChanges(false);
-      }
-    } catch (e) {
-      console.error('Gagal refresh topology:', e);
-    }
-  }, [workspaceIdInt, setNodes, setEdges, setHasChanges]);
+  // ✅ save() sudah memanggil refresh di dalamnya (di useTopologyLoader)
+  // Tidak perlu panggil refresh manual setelah save
+  const handleSave = useCallback(async () => {
+    await save();
+  }, [save]);
 
-  // Trigger load pertama kali
-  useEffect(() => {
-    loadTopology();
-  }, [loadTopology]);
-
-  // Handler untuk Save dan Reload
-  const handleSave = async () => {
-    const result = await save(); // Fungsi save dari hook useTopologyLoader
-
-    // Karena save() mengembalikan promise (berdasarkan update hook sebelumnya)
-    // Kita panggil loadTopology untuk sinkronisasi node_id database
-    await loadTopology();
-  };
-
+  // ✅ handleRefreshAll pakai `refresh` dari hook, bukan loadTopology duplikat
   const handleRefreshAll = useCallback(async () => {
-    await loadTopology();    // Fungsi refresh database yang kita buat sebelumnya
-    await revalidateDetail(); // Fungsi SWR untuk modal detail
-  }, [loadTopology, revalidateDetail]);
+    await refresh();
+    await revalidateDetail();
+  }, [refresh, revalidateDetail]);
 
-  // Di dalam TopologyEditorInner
+  // ── Sync countdown indicator ──────────────────────────────────────────────
   const REFRESH_INTERVAL = 3;
   const [secondsLeft, setSecondsLeft] = useState(REFRESH_INTERVAL);
 
@@ -173,12 +152,12 @@ function TopologyEditorInner(props: {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden ">
+    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden">
 
-      {/* Canvas Area (Sekarang membungkus seluruh layar) */}
+      {/* Canvas Area */}
       <div className="flex-grow relative bg-base-300/50">
 
-        {/* ── FLOATING NAVBAR (Pindah ke dalam Canvas) ────────────────── */}
+        {/* ── FLOATING NAVBAR ─────────────────────────────────────────── */}
         <div className="absolute top-4 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
           {/* Left Side: Info & Status */}
           <div className="flex items-center gap-3 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
@@ -212,16 +191,12 @@ function TopologyEditorInner(props: {
               + Device
             </button>
             <div className="divider divider-horizontal m-0 h-6"></div>
-            {/* <Link href={`/workspaces/${workspaceIdInt}/dashboard`} className="btn btn-ghost btn-sm rounded-xl text-xs">
-              Dashboard
-            </Link> */}
             <button
-              onClick={handleSave} // Gunakan handler baru
+              onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${hasChanges
-                  ? 'btn-primary shadow-lg shadow-primary/30'
-                  : 'btn-disabled opacity-40'
-                }`}
+              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${
+                hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-40'
+              }`}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
@@ -241,14 +216,13 @@ function TopologyEditorInner(props: {
           onlyRenderVisibleElements={true}
         >
           <Background color="#999" gap={30} size={1} />
-          {/* Custom position untuk Controls agar tidak tabrakan dengan navbar */}
           <Controls
             showInteractive={false}
             className="bg-base-100 border-base-300 shadow-xl rounded-xl overflow-hidden !bottom-20 !left-4 !top-auto"
           />
         </ReactFlow>
 
-        {/* ── SYNC INDICATOR (Sinkron dengan Detik) ───────────────────── */}
+        {/* ── SYNC INDICATOR ──────────────────────────────────────────── */}
         <div className="absolute bottom-10 left-6 z-10 flex items-center gap-3 bg-base-100/80 backdrop-blur-md p-2 px-4 rounded-2xl border border-base-300 shadow-lg">
           <div
             className="radial-progress text-primary transition-all duration-1000 ease-linear"
@@ -256,7 +230,7 @@ function TopologyEditorInner(props: {
               '--value': progressValue,
               '--size': '1.6rem',
               '--thickness': '2px',
-              fontSize: '8px'
+              fontSize: '8px',
             } as React.CSSProperties}
           >
             <span className="font-bold">{secondsLeft}</span>
@@ -273,7 +247,6 @@ function TopologyEditorInner(props: {
           <Notification message={notification.message} type={notification.type} />
         )}
 
-        {/* Modals tetap sama */}
         {isAddModalOpen && (
           <AddNodeModal
             onAdd={handleAddNode}

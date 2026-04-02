@@ -54,14 +54,14 @@ export default function TopologyPage() {
           <div className="text-9xl font-black text-primary/20 mb-4">{status || '500'}</div>
           <h1 className="text-3xl font-bold mb-2">{wsError.message}</h1>
           <p className="text-base-content/60 mb-8">
-            {status === 404 
-              ? "Workspace tidak ditemukan atau telah dihapus." 
+            {status === 404
+              ? "Workspace tidak ditemukan atau telah dihapus."
               : "Anda tidak memiliki izin untuk mengelola topologi di workspace ini."}
           </p>
           <div className="flex gap-2 justify-center">
-             <Link href="/workspaces" className="btn btn-primary px-8">
-                My Workspaces
-             </Link>
+            <Link href="/workspaces" className="btn btn-primary px-8">
+              My Workspaces
+            </Link>
           </div>
         </div>
       </div>
@@ -69,11 +69,11 @@ export default function TopologyPage() {
   }
 
   // --- UI STATE: SUCCESS (Render Editor) ---
-return (
-  <TopologyEditor
-    workspaceId={workspaceIdInt}
-    workspaceName={wsData?.data.workspace_name || 'Workspace'}
-    workspaceDescription={wsData?.data.workspace_description || ''}
-  />
-);
+  return (
+    <TopologyEditor
+      workspaceId={workspaceIdInt}
+      workspaceName={wsData?.data.workspace_name || 'Workspace'}
+      workspaceDescription={wsData?.data.workspace_description || ''}
+    />
+  );
 }

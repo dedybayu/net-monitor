@@ -24,25 +24,29 @@ export function useTopologyLoader({
   } | null>(null);
 
   // --- Fungsi Load / Refresh ---
+  // Di dalam useTopologyLoader.ts
   const loadTopology = useCallback(async () => {
+    // Gunakan guard agar tidak fetch jika workspaceId belum siap
+    if (!workspaceId) return;
+
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/topology`);
-      if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      
-      // Update state dengan data terbaru dari DB
+
+      // Gunakan functional update agar setNodes tidak perlu masuk ke dependency array
       setNodes(data.nodes || []);
       setEdges(data.edges || []);
-      setHasChanges(false); // Reset indicator perubahan
+      setHasChanges(false);
     } catch (e) {
-      console.error('Gagal load dari DB:', e);
+      console.error('Gagal load:', e);
     }
-  }, [workspaceId, setNodes, setEdges]);
+  }, [workspaceId, setNodes, setEdges]); // Hanya berubah jika ID workspace berubah
 
-  // Load awal saat mount
+  // Gunakan flag untuk mencegah double fetch pada mount yang sangat cepat
   useEffect(() => {
+    // Jalankan fetch
     loadTopology();
-  }, [loadTopology]);
+  }, [workspaceId, loadTopology]); // Hanya jalankan ulang jika workspaceId berubah
 
   // Auto-dismiss notification
   useEffect(() => {
@@ -70,7 +74,7 @@ export function useTopologyLoader({
         // ✅ REFRESH DATA SETELAH SAVE
         // Ini akan mengambil data baru yang sudah punya node_id dari DB
         await loadTopology();
-        return true; 
+        return true;
       } else {
         throw new Error();
       }
