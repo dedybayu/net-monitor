@@ -1,9 +1,10 @@
 import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/src/lib/prisma";
 import bcrypt from "bcryptjs";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -16,7 +17,7 @@ const handler = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { level: true } // Ambil data level (ADM, NOC, USR)
+          include: { level: true }
         });
 
         if (!user) return null;
@@ -24,26 +25,30 @@ const handler = NextAuth({
         const isPasswordCorrect = await bcrypt.compare(credentials.password, user.password);
         if (!isPasswordCorrect) return null;
 
+        // Data yang di-return di sini harus sesuai dengan interface User di d.ts
         return {
           id: user.user_id.toString(),
           name: user.name,
           email: user.email,
-          role: user.level.level_code, // Simpan ADM/NOC/USR di sini
+          role: user.level.level_code,
+          image: user.profile_picture
         };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // 'user' sekarang sudah memiliki tipe 'role' dari definisi di atas
+      // 'user' di sini otomatis bertipe 'User' yang kita declare di d.ts
       if (user) {
+        token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      // 'session.user' dan 'token' sekarang sudah mengenali 'role'
+      // 'token' di sini otomatis memiliki 'id' dan 'role' karena Module Augmentation
       if (session.user) {
+        session.user.id = token.id;
         session.user.role = token.role;
       }
       return session;
@@ -54,10 +59,10 @@ const handler = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60, // 1 jam
-    updateAge: 0, // Nonaktifkan refresh otomatis
+    maxAge: 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
