@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-import { ReactFlowProvider } from 'reactflow';
 import { TopologyEditor } from './TopologyEditor';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
