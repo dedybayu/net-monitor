@@ -53,7 +53,7 @@ export function useTopologyLoader({
   const save = useCallback(async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/workspace/${workspaceId}/topology`, {
+      const response = await fetch(`/api/workspaces/${workspaceId}/topology`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes, edges, workspaceId: workspaceId }),

@@ -126,55 +126,61 @@ function TopologyEditorInner(props: {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-base-200 text-base-content">
-
-      {/* Navbar */}
-      <div className="navbar bg-base-100 border-b border-base-300 px-6 z-10 shadow-sm">
-        <div className="flex-1">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <h1 className="text-md font-black tracking-tight leading-none uppercase">
-                Network Topology - {props.workspaceName}
-              </h1>
-              <span className="text-[10px] opacity-50">{props.workspaceDescription}</span>
-              {hasChanges && (
-                <span className="badge badge-warning badge-xs font-bold text-[8px] animate-bounce px-2">
-                  BELUM DISIMPAN
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="badge badge-success badge-xs animate-pulse"></span>
-              <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">
-                Live Monitoring Active
+    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden">
+      
+      {/* Canvas Area (Sekarang membungkus seluruh layar) */}
+      <div className="flex-grow relative bg-base-300/50">
+        
+        {/* ── FLOATING NAVBAR (Pindah ke dalam Canvas) ────────────────── */}
+        <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
+          {/* Left Side: Info & Status */}
+          <div className="flex items-center gap-3 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
+            <Link href="" className="btn btn-ghost btn-xs p-0 min-h-0 h-auto hover:bg-transparent">
+               <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">N</div>
+            </Link>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xs font-black tracking-tight uppercase leading-none">
+                  {props.workspaceName}
+                </h1>
+                {hasChanges && (
+                  <span className="badge badge-warning badge-xs font-bold text-[8px] px-2">
+                    UNSAVED
+                  </span>
+                )}
+              </div>
+              <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                <span className="badge badge-success badge-[4px] p-0 h-1.5 w-1.5 animate-pulse"></span>
+                Live Monitoring
               </span>
             </div>
           </div>
-        </div>
-        <div className="flex-none gap-2">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="btn btn-outline btn-sm rounded-lg font-bold"
-          >
-            + Tambah Device
-          </button>
-          <Link href={`/workspaces/${workspaceIdInt}/dashboard`} className="btn btn-ghost btn-sm">
-            Dashboard
-          </Link>
-          <button
-            onClick={save}
-            disabled={!hasChanges || isSaving}
-            className={`btn btn-sm rounded-lg px-6 font-bold ${
-              hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-ghost border-base-300'
-            }`}
-          >
-            {isSaving ? 'Menyimpan...' : 'Simpan'}
-          </button>
-        </div>
-      </div>
 
-      {/* Canvas */}
-      <div className="flex-grow relative overflow-hidden bg-base-300/50">
+          {/* Right Side: Actions */}
+          <div className="flex items-center gap-2 pointer-events-auto bg-base-100/90 backdrop-blur-md p-1.5 rounded-2xl border border-base-300 shadow-2xl">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="btn btn-ghost btn-sm rounded-xl font-bold text-xs"
+            >
+              + Device
+            </button>
+            <div className="divider divider-horizontal m-0 h-6"></div>
+            <Link href={`/workspaces/${workspaceIdInt}/dashboard`} className="btn btn-ghost btn-sm rounded-xl text-xs">
+              Dashboard
+            </Link>
+            <button
+              onClick={save}
+              disabled={!hasChanges || isSaving}
+              className={`btn btn-sm rounded-xl px-5 font-bold text-xs ${
+                hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-30'
+              }`}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+
+        {/* ── REACT FLOW CANVAS ───────────────────────────────────────── */}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -187,29 +193,29 @@ function TopologyEditorInner(props: {
           onlyRenderVisibleElements={true}
         >
           <Background color="#999" gap={30} size={1} />
-          <Controls className="bg-base-100 border-base-300 shadow-2xl rounded-2xl overflow-hidden" />
+          {/* Custom position untuk Controls agar tidak tabrakan dengan navbar */}
+          <Controls 
+            showInteractive={false} 
+            className="bg-base-100 border-base-300 shadow-xl rounded-xl overflow-hidden !bottom-20 !left-4 !top-auto" 
+          />
         </ReactFlow>
+
+        {/* Sync indicator (SWR) */}
+        <div className="absolute bottom-6 left-6 z-10 flex items-center gap-3 bg-base-100/80 backdrop-blur-sm p-2 px-4 rounded-2xl border border-base-300 shadow-lg">
+          <div
+            className="radial-progress text-primary text-[8px]"
+            style={{ '--value': '70', '--size': '1.5rem', '--thickness': '2px' } as React.CSSProperties}
+          ></div>
+          <span className="text-[9px] font-black opacity-50 uppercase tracking-widest">
+            Syncing Status...
+          </span>
+        </div>
 
         {notification && (
           <Notification message={notification.message} type={notification.type} />
         )}
 
-        {/* Sync indicator */}
-        <div className="absolute bottom-6 right-6 flex items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xl">
-          <div
-            className="radial-progress text-primary text-[10px]"
-            style={{ '--value': '70', '--size': '2rem' } as React.CSSProperties}
-          >
-            SWR
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">
-              Server Sync
-            </span>
-            <span className="text-xs font-black font-mono">Real-time status</span>
-          </div>
-        </div>
-
+        {/* Modals tetap sama */}
         {isAddModalOpen && (
           <AddNodeModal
             onAdd={handleAddNode}
@@ -233,10 +239,11 @@ function TopologyEditorInner(props: {
         )}
       </div>
 
-      <footer className="bg-base-100 p-2 border-t border-base-300 flex justify-center gap-8 text-[10px] font-bold opacity-50 uppercase tracking-widest">
+      {/* Mini Footer */}
+      <footer className="bg-base-100 p-1.5 border-t border-base-300 flex justify-center gap-6 text-[8px] font-bold opacity-40 uppercase tracking-widest z-20">
         <span>🖱️ Drag to Move</span>
-        <span>🔗 Connect Dots to Link</span>
-        <span>💾 Save to Database</span>
+        <span>🔗 Connect Dots</span>
+        <span>💾 Save Configuration</span>
       </footer>
     </div>
   );
