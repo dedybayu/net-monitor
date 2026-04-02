@@ -9,7 +9,7 @@ export default withAuth(
 
     // 1. Jika sudah login dan mencoba akses /login atau /register
     if (token && (pathname === "/login" || pathname === "/register")) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/workspaces", req.url));
     }
 
     // 2. Jika mencoba akses dashboard tapi role-nya USR

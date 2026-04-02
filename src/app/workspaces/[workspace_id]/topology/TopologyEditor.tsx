@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -124,19 +124,66 @@ function TopologyEditorInner(props: {
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setHasChanges]);
 
+  // Tambahkan fungsi refresh di tingkat komponen utama
+  const loadTopology = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceIdInt}/topology`);
+      const data = await res.json();
+      if (data.nodes) {
+        setNodes(data.nodes);
+        setEdges(data.edges || []);
+        setHasChanges(false);
+      }
+    } catch (e) {
+      console.error('Gagal refresh topology:', e);
+    }
+  }, [workspaceIdInt, setNodes, setEdges, setHasChanges]);
+
+  // Trigger load pertama kali
+  useEffect(() => {
+    loadTopology();
+  }, [loadTopology]);
+
+  // Handler untuk Save dan Reload
+  const handleSave = async () => {
+    const result = await save(); // Fungsi save dari hook useTopologyLoader
+
+    // Karena save() mengembalikan promise (berdasarkan update hook sebelumnya)
+    // Kita panggil loadTopology untuk sinkronisasi node_id database
+    await loadTopology();
+  };
+
+  const handleRefreshAll = useCallback(async () => {
+    await loadTopology();    // Fungsi refresh database yang kita buat sebelumnya
+    await revalidateDetail(); // Fungsi SWR untuk modal detail
+  }, [loadTopology, revalidateDetail]);
+
+  // Di dalam TopologyEditorInner
+  const REFRESH_INTERVAL = 3;
+  const [secondsLeft, setSecondsLeft] = useState(REFRESH_INTERVAL);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => (prev <= 1 ? REFRESH_INTERVAL : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const progressValue = (secondsLeft / REFRESH_INTERVAL) * 100;
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden">
-      
+    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden ">
+
       {/* Canvas Area (Sekarang membungkus seluruh layar) */}
       <div className="flex-grow relative bg-base-300/50">
-        
+
         {/* ── FLOATING NAVBAR (Pindah ke dalam Canvas) ────────────────── */}
-        <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
+        <div className="absolute top-4 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
           {/* Left Side: Info & Status */}
           <div className="flex items-center gap-3 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
             <Link href="" className="btn btn-ghost btn-xs p-0 min-h-0 h-auto hover:bg-transparent">
-               <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">N</div>
+              <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">N</div>
             </Link>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
@@ -165,15 +212,16 @@ function TopologyEditorInner(props: {
               + Device
             </button>
             <div className="divider divider-horizontal m-0 h-6"></div>
-            <Link href={`/workspaces/${workspaceIdInt}/dashboard`} className="btn btn-ghost btn-sm rounded-xl text-xs">
+            {/* <Link href={`/workspaces/${workspaceIdInt}/dashboard`} className="btn btn-ghost btn-sm rounded-xl text-xs">
               Dashboard
-            </Link>
+            </Link> */}
             <button
-              onClick={save}
+              onClick={handleSave} // Gunakan handler baru
               disabled={!hasChanges || isSaving}
-              className={`btn btn-sm rounded-xl px-5 font-bold text-xs ${
-                hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-30'
-              }`}
+              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${hasChanges
+                  ? 'btn-primary shadow-lg shadow-primary/30'
+                  : 'btn-disabled opacity-40'
+                }`}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
@@ -194,21 +242,31 @@ function TopologyEditorInner(props: {
         >
           <Background color="#999" gap={30} size={1} />
           {/* Custom position untuk Controls agar tidak tabrakan dengan navbar */}
-          <Controls 
-            showInteractive={false} 
-            className="bg-base-100 border-base-300 shadow-xl rounded-xl overflow-hidden !bottom-20 !left-4 !top-auto" 
+          <Controls
+            showInteractive={false}
+            className="bg-base-100 border-base-300 shadow-xl rounded-xl overflow-hidden !bottom-20 !left-4 !top-auto"
           />
         </ReactFlow>
 
-        {/* Sync indicator (SWR) */}
-        <div className="absolute bottom-6 left-6 z-10 flex items-center gap-3 bg-base-100/80 backdrop-blur-sm p-2 px-4 rounded-2xl border border-base-300 shadow-lg">
+        {/* ── SYNC INDICATOR (Sinkron dengan Detik) ───────────────────── */}
+        <div className="absolute bottom-10 left-6 z-10 flex items-center gap-3 bg-base-100/80 backdrop-blur-md p-2 px-4 rounded-2xl border border-base-300 shadow-lg">
           <div
-            className="radial-progress text-primary text-[8px]"
-            style={{ '--value': '70', '--size': '1.5rem', '--thickness': '2px' } as React.CSSProperties}
-          ></div>
-          <span className="text-[9px] font-black opacity-50 uppercase tracking-widest">
-            Syncing Status...
-          </span>
+            className="radial-progress text-primary transition-all duration-1000 ease-linear"
+            style={{
+              '--value': progressValue,
+              '--size': '1.6rem',
+              '--thickness': '2px',
+              fontSize: '8px'
+            } as React.CSSProperties}
+          >
+            <span className="font-bold">{secondsLeft}</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black opacity-40 uppercase tracking-[0.2em]">Live Sync</span>
+            <span className="text-[10px] font-bold font-mono">
+              {secondsLeft === REFRESH_INTERVAL ? 'FETCHING...' : `IN ${secondsLeft}s`}
+            </span>
+          </div>
         </div>
 
         {notification && (
@@ -232,7 +290,7 @@ function TopologyEditorInner(props: {
             nodeDetail={nodeDetail}
             isDetailLoading={isDetailLoading}
             serviceStatusData={serviceStatusData}
-            onServiceAdded={revalidateDetail}
+            onServiceAdded={handleRefreshAll}
             onNodeDeleted={handleNodeDeleted}
             onClose={() => setIsDetailOpen(false)}
           />

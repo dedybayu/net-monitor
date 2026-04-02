@@ -39,7 +39,7 @@ export function useServiceStatus({ selectedNodeId, isDetailOpen }: UseServiceSta
   const { data: serviceStatusData } = useSWR<StatusApiResponse>(
     isDetailOpen && servicePayload.length > 0 ? ['/api/status', servicePayload] : null,
     statusFetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval: 3000 }
   );
 
   return { nodeDetail, isDetailLoading, serviceStatusData, revalidateDetail };

@@ -160,33 +160,38 @@ function NodeEditForm({
   const set = (field: keyof NodeForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/workspaces/${workspaceId}/nodes/${nodeId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            label: form.label,
-            description: form.description,
-            ip: form.ip,
-            method: form.method,
-            port: form.method === 'TCP' ? form.port : 0,
-          }),
-        }
-      );
-      if (!res.ok) throw new Error('Gagal mengupdate node');
-      onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [workspaceId, form, nodeId, onSuccess]);
+// Di dalam NodeEditForm
+const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSaving(true);
+  setError(null);
+  try {
+    const res = await fetch(
+      `/api/workspaces/${workspaceId}/nodes/${nodeId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: form.label,
+          description: form.description,
+          ip: form.ip,
+          method: form.method,
+          port: form.method === 'TCP' ? form.port : 0,
+        }),
+      }
+    );
+    
+    if (!res.ok) throw new Error('Gagal mengupdate node');
+
+    // ✅ PENTING: Panggil onSuccess yang akan memicu refresh di TopologyEditorInner
+    onSuccess(); 
+    
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+  } finally {
+    setIsSaving(false);
+  }
+}, [workspaceId, form, nodeId, onSuccess]);
 
   return (
     <form onSubmit={handleSubmit} className="p-6 bg-warning/5 border-b border-warning/20 space-y-4">
