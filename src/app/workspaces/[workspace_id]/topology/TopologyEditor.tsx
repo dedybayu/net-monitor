@@ -12,10 +12,10 @@ import ReactFlow, {
   NodeChange,
   EdgeChange,
   useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
 import { MonitorNode } from './MonitorNode';
 import { TopologyNode } from './types';
@@ -26,9 +26,15 @@ import { Notification } from './components/Notification';
 import { AddNodeModal } from './components/AddNodeModal';
 import { NodeDetailModal } from './components/NodeDetailModal';
 
+// ✅ Di luar semua komponen — tidak pernah re-create
 const nodeTypes = { monitor: MonitorNode };
 
-export function TopologyEditor(props: { workspaceId: number, workspaceName: string, workspaceDescription: string }) {
+// ── Inner component (butuh useReactFlow, harus di dalam Provider) ──────────
+function TopologyEditorInner(props: {
+  workspaceId: number;
+  workspaceName: string;
+  workspaceDescription: string;
+}) {
   const workspaceIdInt = props.workspaceId;
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -39,7 +45,7 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
 
   const { screenToFlowPosition } = useReactFlow();
 
-  // ── Hooks ──────────────────────────────────────────────────────────────────
+  // ── Hooks ────────────────────────────────────────────────────────────────
   const { isSaving, hasChanges, setHasChanges, notification, setNotification, save } =
     useTopologyLoader({ workspaceId: workspaceIdInt, setNodes, setEdges, nodes, edges });
 
@@ -50,7 +56,7 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
     isDetailOpen,
   });
 
-  // ── Derived data ───────────────────────────────────────────────────────────
+  // ── Derived data ─────────────────────────────────────────────────────────
   const activeNodeData = useMemo(() => {
     const selected = nodes.find(
       (n: TopologyNode) => n.node_id?.toString() === selectedNodeId
@@ -58,7 +64,7 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
     return selected?.data;
   }, [nodes, selectedNodeId]);
 
-  // ── Callbacks ──────────────────────────────────────────────────────────────
+  // ── Callbacks ─────────────────────────────────────────────────────────────
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: TopologyNode) => {
       const dbId = node.node_id;
@@ -112,14 +118,13 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
   );
 
   const handleNodeDeleted = useCallback(() => {
-    // Remove deleted node from canvas immediately, then close modal
     setNodes((nds) => nds.filter((n: TopologyNode) => n.node_id?.toString() !== selectedNodeId));
     setHasChanges(true);
     setIsDetailOpen(false);
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setHasChanges]);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-base-200 text-base-content">
 
@@ -159,10 +164,9 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
           <button
             onClick={save}
             disabled={!hasChanges || isSaving}
-            className={`btn btn-sm rounded-lg px-6 font-bold ${hasChanges
-                ? 'btn-primary shadow-lg shadow-primary/30'
-                : 'btn-ghost border-base-300'
-              }`}
+            className={`btn btn-sm rounded-lg px-6 font-bold ${
+              hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-ghost border-base-300'
+            }`}
           >
             {isSaving ? 'Menyimpan...' : 'Simpan'}
           </button>
@@ -234,5 +238,18 @@ export function TopologyEditor(props: { workspaceId: number, workspaceName: stri
         <span>💾 Save to Database</span>
       </footer>
     </div>
+  );
+}
+
+// ── Outer component (exported) — Provider stabil di sini ──────────────────
+export function TopologyEditor(props: {
+  workspaceId: number;
+  workspaceName: string;
+  workspaceDescription: string;
+}) {
+  return (
+    <ReactFlowProvider>
+      <TopologyEditorInner {...props} />
+    </ReactFlowProvider>
   );
 }

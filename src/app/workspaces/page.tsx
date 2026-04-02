@@ -17,7 +17,7 @@ export default function WorkspacePage() {
   const [selectedWs, setSelectedWs] = useState<Workspace | null>(null);
 
   useEffect(() => {
-    fetch("/api/workspace")
+    fetch("/api/workspaces")
       .then((res) => res.json())
       .then((data) => {
         setWorkspaces(data);

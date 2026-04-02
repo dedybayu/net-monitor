@@ -31,7 +31,7 @@ export default function TopologyPage() {
 
   // --- 1. VALIDASI WORKSPACE & AKSES ---
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
-    workspaceIdInt ? `/api/workspace/${workspaceIdInt}` : null,
+    workspaceIdInt ? `/api/workspaces/${workspaceIdInt}` : null,
     getFetcher
   );
 
@@ -71,13 +71,11 @@ export default function TopologyPage() {
   }
 
   // --- UI STATE: SUCCESS (Render Editor) ---
-  return (
-    <ReactFlowProvider>
-      <TopologyEditor
-        workspaceId={workspaceIdInt}
-        workspaceName={wsData?.data.workspace_name || 'Workspace'}
-        workspaceDescription={wsData?.data.workspace_description || ''}
-      />
-    </ReactFlowProvider>
-  );
+return (
+  <TopologyEditor
+    workspaceId={workspaceIdInt}
+    workspaceName={wsData?.data.workspace_name || 'Workspace'}
+    workspaceDescription={wsData?.data.workspace_description || ''}
+  />
+);
 }

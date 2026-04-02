@@ -16,10 +16,10 @@ export function useServiceStatus({ selectedNodeId, isDetailOpen }: UseServiceSta
     const params = useParams(); 
     const workspace_id = params?.workspace_id as string;
     const workspaceIdInt = parseInt(workspace_id, 10);
-    
+
   const detailKey =
     isDetailOpen && selectedNodeId
-      ? `/api/workspace/${workspaceIdInt}/nodes/${selectedNodeId}`
+      ? `/api/workspaces/${workspaceIdInt}/nodes/${selectedNodeId}`
       : null;
 
   const {

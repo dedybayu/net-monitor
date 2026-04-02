@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const session = await getServerSession(authOptions);
 
     // debug login
-    console.log("Session Data:", session);
+    // console.log("Session Data:", session);
     // Jika tidak ada session, user belum login
     if (!session || !session.user?.id) {
       return NextResponse.json(

@@ -166,7 +166,7 @@ function NodeEditForm({
     setError(null);
     try {
       const res = await fetch(
-        `/api/workspace/${workspaceId}/nodes/${nodeId}`,
+        `/api/workspaces/${workspaceId}/nodes/${nodeId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -305,7 +305,7 @@ function ServiceRow({
     setError(null);
     try {
       const res = await fetch(
-        `/api/workspace/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
+        `/api/workspaces/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -329,7 +329,7 @@ function ServiceRow({
     setIsDeleting(true);
     try {
       const res = await fetch(
-        `/api/workspace/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
+        `/api/workspaces/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error('Gagal menghapus service');
@@ -452,7 +452,7 @@ function AddServiceForm({
     setIsSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/workspace/${workspaceId}/nodes/${nodeId}/services`, {
+      const res = await fetch(`/api/workspaces/${workspaceId}/nodes/${nodeId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -531,7 +531,7 @@ export function NodeDetailModal({
     setDeleteNodeError(null);
     try {
       const res = await fetch(
-        `/api/workspace/${workspaceId}/nodes/${selectedNodeId}`,
+        `/api/workspaces/${workspaceId}/nodes/${selectedNodeId}`,
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error('Gagal menghapus node');

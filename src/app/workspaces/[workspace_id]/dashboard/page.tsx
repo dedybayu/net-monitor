@@ -47,13 +47,13 @@ export default function MonitorPage() {
 
   // 1. VALIDASI WORKSPACE
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
-    workspaceIdInt ? `/api/workspace/${workspaceIdInt}` : null,
+    workspaceIdInt ? `/api/workspaces/${workspaceIdInt}` : null,
     getFetcher
   );
 
   // 2. AMBIL DEVICES
   const { data: devices, error: deviceError } = useSWR<Device[]>(
-    wsData ? `/api/workspace/${workspaceIdInt}/nodes` : null,
+    wsData ? `/api/workspaces/${workspaceIdInt}/nodes` : null,
     getFetcher
   );
 

@@ -36,7 +36,7 @@ export function useTopologyLoader({
   useEffect(() => {
     async function loadTopology() {
       try {
-        const res = await fetch(`/api/workspace/${workspaceId}/topology`);
+        const res = await fetch(`/api/workspaces/${workspaceId}/topology`);
         const data = await res.json();
         if (data.nodes?.length > 0) {
           setNodes(data.nodes);
@@ -48,7 +48,7 @@ export function useTopologyLoader({
       }
     }
     loadTopology();
-  }, [setNodes, setEdges]);
+  }, [ workspaceId, setNodes, setEdges]);
 
   const save = useCallback(async () => {
     setIsSaving(true);
@@ -73,7 +73,7 @@ export function useTopologyLoader({
     } finally {
       setIsSaving(false);
     }
-  }, [nodes, edges]);
+  }, [ workspaceId, setHasChanges, setNotification, nodes, edges]);
 
   return { isSaving, hasChanges, setHasChanges, notification, setNotification, save };
 }
