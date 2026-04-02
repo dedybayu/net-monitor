@@ -170,7 +170,7 @@ export default function MonitorPage() {
           <div className="divider divider-horizontal my-3"></div>
           <div>
             <h1 className="font-bold text-sm leading-none">{wsData?.data.workspace_name}</h1>
-            <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">WS-{workspace_id}</span>
+            <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">{wsData?.data.workspace_description}</span>
           </div>
         </div>
         <div className="flex-none gap-4">
