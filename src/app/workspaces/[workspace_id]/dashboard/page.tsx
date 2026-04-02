@@ -43,7 +43,7 @@ export default function MonitorPage() {
   const params = useParams();
   const workspace_id = params?.workspace_id as string;
   const workspaceIdInt = parseInt(workspace_id, 10);
-  const [countdown, setCountdown] = useState<number>(5);
+  const [countdown, setCountdown] = useState<number>(3);
 
   // 1. VALIDASI WORKSPACE
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
@@ -74,8 +74,8 @@ export default function MonitorPage() {
     targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
     statusFetcher,
     {
-      refreshInterval: 5000,
-      onSuccess: () => setCountdown(5),
+      refreshInterval: 3000,
+      onSuccess: () => setCountdown(3),
     }
   );
 
@@ -132,7 +132,13 @@ export default function MonitorPage() {
   }, [deviceStats]);
 
   useEffect(() => {
-    const timer = setInterval(() => setCountdown((prev) => (prev > 1 ? prev - 1 : 5)), 1000);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) return 3;
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
   }, []);
 
@@ -170,7 +176,7 @@ export default function MonitorPage() {
         <div className="flex-none gap-4">
           <div className="hidden md:flex flex-col items-end text-right mr-2">
             <span className="text-[10px] opacity-50 font-bold uppercase tracking-widest leading-none mb-1">Cycle</span>
-            <progress className="progress progress-primary w-24 h-1.5" value={(5 - countdown) * 20} max="100"></progress>
+            <progress className="progress progress-primary w-24 h-1.5" value={(3 - countdown) * (100 / 3)} max="100"></progress>
           </div>
           <Link href={`/workspaces/${workspaceIdInt}/topology`} className="btn btn-primary btn-sm rounded-lg px-6 font-bold">Topologi</Link>
         </div>

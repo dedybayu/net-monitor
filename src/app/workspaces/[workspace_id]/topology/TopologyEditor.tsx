@@ -184,6 +184,7 @@ function TopologyEditorInner(props: {
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           fitView
+          onlyRenderVisibleElements={true}
         >
           <Background color="#999" gap={30} size={1} />
           <Controls className="bg-base-100 border-base-300 shadow-2xl rounded-2xl overflow-hidden" />

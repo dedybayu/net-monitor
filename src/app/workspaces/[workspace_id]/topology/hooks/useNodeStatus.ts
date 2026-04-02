@@ -25,7 +25,7 @@ export function useNodeStatus({ nodes, setNodes }: UseNodeStatusProps) {
   const { data: apiData } = useSWR<StatusApiResponse, Error, [string, MonitoringTarget[]] | null>(
     targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
     statusFetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval: 3000 }
   );
 
   // Sync live status back into node data

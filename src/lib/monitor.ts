@@ -85,7 +85,7 @@ export function registerAndStart(ip: string, port: number) {
   // Jalankan interval jika belum jalan
   if (!globalForMonitor.isWorkerRunning) {
     globalForMonitor.isWorkerRunning = true;
-    setInterval(runMonitoring, 10000);
+    setInterval(runMonitoring, 3000);
     runMonitoring(); 
   }
 }
