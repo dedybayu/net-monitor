@@ -38,7 +38,7 @@ export default function LoginForm() {
             if (res?.error) {
                 setError("Email atau password salah")
             } else {
-                router.push("/dashboard")
+                router.push("/workspaces")
                 router.refresh() // Memastikan middleware mendeteksi session baru
             }
         } catch {
