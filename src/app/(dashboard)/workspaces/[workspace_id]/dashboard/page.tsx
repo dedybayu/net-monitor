@@ -14,7 +14,6 @@ interface ApiError extends Error {
   status?: number;
 }
 
-// Fetcher umum
 const getFetcher = async (url: string) => {
   const res = await fetch(url);
   const data = await res.json();
@@ -26,7 +25,6 @@ const getFetcher = async (url: string) => {
   return data;
 };
 
-// Fetch status monitoring
 const statusFetcher = async (key: [string, MonitoringTarget[]] | null): Promise<StatusApiResponse> => {
   if (!key) return { nodes: [] };
   const [url, payload] = key;
@@ -45,19 +43,16 @@ export default function MonitorPage() {
   const workspaceIdInt = parseInt(workspace_id, 10);
   const [countdown, setCountdown] = useState<number>(3);
 
-  // 1. VALIDASI WORKSPACE
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
     workspaceIdInt ? `/api/workspaces/${workspaceIdInt}` : null,
     getFetcher
   );
 
-  // 2. AMBIL DEVICES
   const { data: devices } = useSWR<Device[]>(
     wsData ? `/api/workspaces/${workspaceIdInt}/nodes` : null,
     getFetcher
   );
 
-  // 3. PAYLOAD STATUS
   const targetPayload = useMemo<MonitoringTarget[]>(() => {
     if (!devices) return [];
     return devices.map((d) => {
@@ -69,7 +64,6 @@ export default function MonitorPage() {
     });
   }, [devices]);
 
-  // 4. FETCH STATUS
   const { data: apiData } = useSWR<StatusApiResponse, Error, [string, MonitoringTarget[]] | null>(
     targetPayload.length > 0 ? ['/api/status', targetPayload] : null,
     statusFetcher,
@@ -79,7 +73,6 @@ export default function MonitorPage() {
     }
   );
 
-  // 🔥 HELPER: STATUS PER DEVICE (Logika Revisi Anda)
   const getDeviceData = (device: Device) => {
     const relatedNodes = apiData?.nodes.filter((n) => {
       const ipNode = n.target.split(':')[0];
@@ -90,13 +83,11 @@ export default function MonitorPage() {
     if (relatedNodes.length === 0) return { status: 'unknown', latency: '---' };
 
     const onlineNode = relatedNodes.find((n) => n.status.toLowerCase() === 'online');
-
     if (onlineNode) return { status: 'online', latency: onlineNode.latency };
 
     return { status: 'offline', latency: 'N/A' };
   };
 
-  // 🔥 STATS DEVICE (SOURCE OF TRUTH)
   const deviceStats = useMemo(() => {
     if (!devices || devices.length === 0) return { total: 0, online: 0, avgLatency: 0 };
 
@@ -107,23 +98,18 @@ export default function MonitorPage() {
       const data = getDeviceData(device);
       if (data.status === 'online') {
         online++;
-        // Mengambil angka dari string latency (misal "15ms" -> 15)
         const latencyValue = parseInt(data.latency);
-        if (!isNaN(latencyValue)) {
-          totalLatency += latencyValue;
-        }
+        if (!isNaN(latencyValue)) totalLatency += latencyValue;
       }
     });
 
     return {
       total: devices.length,
       online,
-      // Hitung rata-rata hanya dari perangkat yang online
       avgLatency: online > 0 ? Math.round(totalLatency / online) : 0
     };
   }, [devices, apiData]);
 
-  // 🔥 HEALTH STATUS
   const healthStatus = useMemo(() => {
     if (deviceStats.total === 0) return { label: 'No Data', color: 'text-base-content/50', bg: 'bg-base-100' };
     if (deviceStats.online === deviceStats.total) return { label: 'Healthy', color: 'text-success', bg: 'bg-success/10' };
@@ -133,24 +119,21 @@ export default function MonitorPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) return 3;
-        return prev - 1;
-      });
+      setCountdown((prev) => (prev <= 1 ? 3 : prev - 1));
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
   if (wsLoading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4">
+    // pt-16 = tinggi navbar, lg:pl-64 = lebar sidebar
+    <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4 pt-16 lg:pl-64">
       <span className="loading loading-spinner loading-lg text-primary"></span>
       <p className="text-sm font-bold tracking-widest animate-pulse uppercase">Verifying Access...</p>
     </div>
   );
 
   if (wsError) return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-base-200">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 pt-16 lg:pl-64">
       <div className="alert alert-error shadow-lg max-w-lg">
         <span>Error: {wsError.message}</span>
         <button onClick={() => window.location.reload()} className="btn btn-sm btn-ghost border border-white/20">Retry</button>
@@ -159,33 +142,43 @@ export default function MonitorPage() {
   );
 
   return (
-    <div className="min-h-screen bg-base-200 text-base-content font-sans">
-      {/* NAVBAR */}
-      <div className="navbar bg-base-100 border-b border-base-300 px-6 sticky top-0 z-50 shadow-sm">
+    /*
+      pt-16  → geser konten ke bawah setinggi top navbar (h-16)
+      lg:pl-64 → geser konten ke kanan selebar sidebar (w-64) di desktop
+    */
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-16 lg:pl-64">
+
+      {/* SUB-NAVBAR halaman ini (sticky, ikut offset sidebar) */}
+      <div className="navbar bg-base-100 border-b border-base-300 px-6 sticky top-16 z-40 shadow-sm">
         <div className="flex-1 gap-4">
-          <Link href="/workspaces" className="btn btn-ghost text-xl font-black tracking-tighter gap-2 px-0">
-            <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-content shadow-lg shadow-primary/20">N</div>
-            NETMONITOR
-          </Link>
-          <div className="divider divider-horizontal my-3"></div>
           <div>
             <h1 className="font-bold text-sm leading-none">{wsData?.data.workspace_name}</h1>
-            <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">{wsData?.data.workspace_description}</span>
+            <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">
+              {wsData?.data.workspace_description}
+            </span>
           </div>
         </div>
         <div className="flex-none gap-4">
           <div className="hidden md:flex flex-col items-end text-right mr-2">
             <span className="text-[10px] opacity-50 font-bold uppercase tracking-widest leading-none mb-1">Cycle</span>
-            <progress className="progress progress-primary w-24 h-1.5" value={(3 - countdown) * (100 / 3)} max="100"></progress>
+            <progress
+              className="progress progress-primary w-24 h-1.5"
+              value={(3 - countdown) * (100 / 3)}
+              max="100"
+            />
           </div>
-          <Link href={`/workspaces/${workspaceIdInt}/topology`} className="btn btn-primary btn-sm rounded-lg px-6 font-bold">Topologi</Link>
+          <Link
+            href={`/workspaces/${workspaceIdInt}/topology`}
+            className="btn btn-primary btn-sm rounded-lg px-6 font-bold"
+          >
+            Topologi
+          </Link>
         </div>
       </div>
 
       <main className="p-6 md:p-10 max-w-7xl mx-auto">
         {/* STATS SUMMARY */}
         <div className="stats shadow bg-base-100 w-full mb-10 border border-base-300 overflow-hidden">
-
           <div className="stat">
             <div className="stat-title font-bold text-[10px] uppercase tracking-widest opacity-60">Nodes Tracked</div>
             <div className="stat-value text-primary">{deviceStats.total}</div>
@@ -198,7 +191,6 @@ export default function MonitorPage() {
             <div className="stat-desc font-bold">{deviceStats.online} / {deviceStats.total} Online</div>
           </div>
 
-          {/* STAT BARU: AVERAGE LATENCY */}
           <div className="stat border-l border-base-300 bg-base-200/50">
             <div className="stat-title font-bold text-[10px] uppercase tracking-widest opacity-60">Avg. Latency</div>
             <div className="stat-value text-secondary font-mono">
@@ -221,7 +213,10 @@ export default function MonitorPage() {
             const isOnline = deviceData.status === 'online';
 
             return (
-              <div key={device.id} className={`card bg-base-100 shadow-xl border ${isOnline ? 'border-base-300' : 'border-error/50 animate-pulse'} hover:border-primary transition-all group`}>
+              <div
+                key={device.id}
+                className={`card bg-base-100 shadow-xl border ${isOnline ? 'border-base-300' : 'border-error/50 animate-pulse'} hover:border-primary transition-all group`}
+              >
                 <div className="card-body p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="max-w-[70%]">

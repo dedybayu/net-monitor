@@ -22,25 +22,12 @@ export const metadata: Metadata = {
   description: "Pantau Jaringanmu dengan Mudah dan Cepat",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="light">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
-      >
-        {/* 2. Bungkus semua komponen dengan NextAuthProvider */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <NextAuthProvider>
-          <Navbar />
-
-          <main className="flex-1 pt-16">
-            {children}
-          </main>
-
-          <Footer />
+          {children}
         </NextAuthProvider>
       </body>
     </html>

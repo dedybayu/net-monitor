@@ -57,7 +57,7 @@ export default function RegisterForm() {
                     <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-content font-black text-2xl mb-4 shadow-lg shadow-primary/20">
                         N
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight uppercase">
+                    <h2 className="text-3xl font-black tracking-tight">
                         Daftar Akun
                     </h2>
                     <p className="text-base-content/60 mt-2 font-medium">

@@ -26,10 +26,8 @@ import { Notification } from './components/Notification';
 import { AddNodeModal } from './components/AddNodeModal';
 import { NodeDetailModal } from './components/NodeDetailModal';
 
-// ✅ Di luar semua komponen — tidak pernah re-create
 const nodeTypes = { monitor: MonitorNode };
 
-// ── Inner component (butuh useReactFlow, harus di dalam Provider) ──────────
 function TopologyEditorInner(props: {
   workspaceId: number;
   workspaceName: string;
@@ -45,8 +43,6 @@ function TopologyEditorInner(props: {
 
   const { screenToFlowPosition } = useReactFlow();
 
-  // ── Hooks ────────────────────────────────────────────────────────────────
-  // ✅ Gunakan `refresh` dari hook — tidak perlu buat loadTopology sendiri
   const { isSaving, hasChanges, setHasChanges, notification, setNotification, save, refresh } =
     useTopologyLoader({ workspaceId: workspaceIdInt, setNodes, setEdges, nodes, edges });
 
@@ -57,7 +53,6 @@ function TopologyEditorInner(props: {
     isDetailOpen,
   });
 
-  // ── Derived data ─────────────────────────────────────────────────────────
   const activeNodeData = useMemo(() => {
     const selected = nodes.find(
       (n: TopologyNode) => n.node_id?.toString() === selectedNodeId
@@ -65,7 +60,6 @@ function TopologyEditorInner(props: {
     return selected?.data;
   }, [nodes, selectedNodeId]);
 
-  // ── Callbacks ─────────────────────────────────────────────────────────────
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: TopologyNode) => {
       const dbId = node.node_id;
@@ -125,19 +119,15 @@ function TopologyEditorInner(props: {
     setSelectedNodeId(null);
   }, [selectedNodeId, setNodes, setHasChanges]);
 
-  // ✅ save() sudah memanggil refresh di dalamnya (di useTopologyLoader)
-  // Tidak perlu panggil refresh manual setelah save
   const handleSave = useCallback(async () => {
     await save();
   }, [save]);
 
-  // ✅ handleRefreshAll pakai `refresh` dari hook, bukan loadTopology duplikat
   const handleRefreshAll = useCallback(async () => {
     await refresh();
     await revalidateDetail();
   }, [refresh, revalidateDetail]);
 
-  // ── Sync countdown indicator ──────────────────────────────────────────────
   const REFRESH_INTERVAL = 3;
   const [secondsLeft, setSecondsLeft] = useState(REFRESH_INTERVAL);
 
@@ -150,19 +140,24 @@ function TopologyEditorInner(props: {
 
   const progressValue = (secondsLeft / REFRESH_INTERVAL) * 100;
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-base-200 text-base-content overflow-hidden">
+    /*
+      Menggunakan fixed positioning yang memperhitungkan:
+      - top-16   : tinggi top navbar
+      - left-0   : mobile (sidebar tersembunyi)
+      - lg:left-64: desktop (sidebar lebar 64)
+      - right-0 + bottom-0: penuh ke kanan dan bawah
+      Ini menghindari masalah h-screen yang overflow saat ada offset.
+    */
+    <div className="fixed top-16 left-0 lg:left-64 right-0 bottom-0 flex flex-col bg-base-200 text-base-content overflow-hidden">
 
       {/* Canvas Area */}
       <div className="flex-grow relative bg-base-300/50">
 
         {/* ── FLOATING NAVBAR ─────────────────────────────────────────── */}
         <div className="absolute top-4 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
-          {/* Left Side: Info & Status */}
+          {/* Left Side */}
           <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
-
-            {/* TOMBOL BACK */}
             <Link
               href="/workspaces"
               className="btn btn-ghost btn-xs btn-circle hover:bg-base-300 transition-colors"
@@ -173,11 +168,12 @@ function TopologyEditorInner(props: {
               </svg>
             </Link>
 
-            {/* Divider Kecil antara Back dan Logo */}
             <div className="w-[1px] h-4 bg-base-300 mx-1"></div>
 
             <Link href="" className="btn btn-ghost btn-xs p-0 min-h-0 h-auto hover:bg-transparent">
-              <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">{props.workspaceName.charAt(0)}</div>
+              <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">
+                {props.workspaceName.charAt(0)}
+              </div>
             </Link>
 
             <div className="flex flex-col">
@@ -210,8 +206,9 @@ function TopologyEditorInner(props: {
             <button
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-40'
-                }`}
+              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${
+                hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-40'
+              }`}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
@@ -295,7 +292,6 @@ function TopologyEditorInner(props: {
   );
 }
 
-// ── Outer component (exported) — Provider stabil di sini ──────────────────
 export function TopologyEditor(props: {
   workspaceId: number;
   workspaceName: string;
