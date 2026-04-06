@@ -70,7 +70,7 @@ export default function Navbar() {
               </svg>
             </label>
             <Link href="/">
-              <span className="btn btn-ghost text-2xl font-extrabold">NetMonitor</span>
+              <span className="btn btn-ghost text-2xl font-extrabold">NetMonitor SIDEBAR</span>
             </Link>
           </div>
 

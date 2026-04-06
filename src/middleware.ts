@@ -40,6 +40,6 @@ export const config = {
     "/info/:path*",
     "/login", 
     "/register", 
-    "/topology",
+    "/workspaces/:path*",
     "/api/workspace/:path*"],
 };

@@ -160,24 +160,40 @@ function TopologyEditorInner(props: {
         {/* ── FLOATING NAVBAR ─────────────────────────────────────────── */}
         <div className="absolute top-4 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
           {/* Left Side: Info & Status */}
-          <div className="flex items-center gap-3 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
-            <Link href="" className="btn btn-ghost btn-xs p-0 min-h-0 h-auto hover:bg-transparent">
-              <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">N</div>
+          <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
+
+            {/* TOMBOL BACK */}
+            <Link
+              href="/workspaces"
+              className="btn btn-ghost btn-xs btn-circle hover:bg-base-300 transition-colors"
+              title="Back to Workspaces"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
+              </svg>
             </Link>
+
+            {/* Divider Kecil antara Back dan Logo */}
+            <div className="w-[1px] h-4 bg-base-300 mx-1"></div>
+
+            <Link href="" className="btn btn-ghost btn-xs p-0 min-h-0 h-auto hover:bg-transparent">
+              <div className="h-6 w-6 bg-primary rounded-lg flex items-center justify-center text-primary-content text-[10px] font-black">{props.workspaceName.charAt(0)}</div>
+            </Link>
+
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <h1 className="text-xs font-black tracking-tight uppercase leading-none">
                   {props.workspaceName}
                 </h1>
                 {hasChanges && (
-                  <span className="badge badge-warning badge-xs font-bold text-[8px] px-2">
+                  <span className="badge badge-warning badge-xs font-bold text-[8px] px-2 animate-pulse">
                     UNSAVED
                   </span>
                 )}
               </div>
               <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
-                <span className="badge badge-success badge-[4px] p-0 h-1.5 w-1.5 animate-pulse"></span>
-                Live Monitoring
+                <span className="badge badge-success h-1.5 w-1.5 p-0 animate-pulse"></span>
+                Live
               </span>
             </div>
           </div>
@@ -194,9 +210,8 @@ function TopologyEditorInner(props: {
             <button
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${
-                hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-40'
-              }`}
+              className={`btn btn-sm rounded-xl px-6 font-bold text-xs transition-all ${hasChanges ? 'btn-primary shadow-lg shadow-primary/30' : 'btn-disabled opacity-40'
+                }`}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
