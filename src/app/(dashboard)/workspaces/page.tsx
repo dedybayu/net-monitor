@@ -93,15 +93,15 @@ function WorkspaceCard({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span className="text-[10px] opacity-40 font-semibold truncate">
-              Shared by <span className="font-black">{sharedBy}</span>
+              Owned by: <span className="font-black">{sharedBy}</span>
             </span>
           </div>
         )}
 
         {/* ID CHIP */}
-        <div className="font-mono text-[9px] opacity-30 font-bold tracking-widest mb-4">
+        {/* <div className="font-mono text-[9px] opacity-30 font-bold tracking-widest mb-4">
           WS-{String(ws.workspace_id).padStart(4, "0")}
-        </div>
+        </div> */}
 
         {/* ACTIONS */}
         <div className="flex gap-2 pt-4 border-t border-base-300/60">
