@@ -1,48 +1,136 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma"; // Sesuaikan dengan lokasi prisma client Anda
-import { authOptions } from "@/src/app/api/auth/[...nextauth]/route"; // Sesuaikan path authOptions Anda
+import { prisma } from "@/src/lib/prisma";
+import { authOptions } from "@/src/app/api/auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 
+async function getUserId() {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const userIdInt = parseInt(userId, 10);
+  return isNaN(userIdInt) ? null : userIdInt;
+}
+
+/**
+ * GET: Mengambil workspace milik sendiri (Owner) DAN yang dibagikan ke saya
+ */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    
-    // session.user.id di NextAuth biasanya string
-    const userId = session?.user?.id;
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const [ownedWorkspaces, sharedWorkspaces] = await Promise.all([
+      // Workspace milik sendiri
+      prisma.workspace.findMany({
+        where: { owner_id: userId },
+        orderBy: { created_at: 'desc' }
+      }),
+      // Workspace yang dibagikan (bukan milik sendiri)
+      prisma.workspace.findMany({
+        where: {
+          users: { some: { user_id: userId } },
+          NOT: { owner_id: userId } // exclude milik sendiri
+        },
+        include: {
+          // Sertakan info owner jika ingin tampilkan "Shared by X"
+          owner: { select: { name: true, email: true } }
+        },
+        orderBy: { created_at: 'desc' }
+      }),
+    ]);
 
-    // --- PERBAIKAN DI SINI ---
-    // Ubah string ID dari session menjadi Integer agar cocok dengan Database (Prisma)
-    const userIdInt = parseInt(userId, 10);
+    return NextResponse.json({ owned: ownedWorkspaces, shared: sharedWorkspaces });
+  } catch (error) {
+    console.error("GET Error:", error);
+    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+  }
+}
 
-    if (isNaN(userIdInt)) {
-      return NextResponse.json({ message: "Invalid User ID" }, { status: 400 });
-    }
+/**
+ * POST: Membuat Workspace baru (User otomatis jadi owner_id)
+ */
+export async function POST(req: Request) {
+  try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const userWorkspaces = await prisma.userWorkspace.findMany({
-      where: {
-        user_id: userIdInt, // Gunakan hasil parseInt
+    const { workspace_name, workspace_description } = await req.json();
+
+    const newWorkspace = await prisma.workspace.create({
+      data: {
+        workspace_name,
+        workspace_description,
+        owner_id: userId, // Set owner secara eksplisit
       },
-      include: {
-        workspace: true,
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
     });
 
-    const workspaces = userWorkspaces.map((uw) => ({
-      ...uw.workspace,
-      permission: uw.permision,
-    }));
-
-    return NextResponse.json(workspaces);
+    return NextResponse.json(newWorkspace, { status: 201 });
   } catch (error) {
-    // Tambahkan log untuk debug di terminal
-    console.error("Workspace Fetch Error:", error);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ message: "Error creating workspace" }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH: Update Workspace (Hanya bisa oleh Owner)
+ */
+export async function PATCH(req: Request) {
+  try {
+    const userId = await getUserId();
+    const { workspace_id, workspace_name, workspace_description } = await req.json();
+
+    if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+    // Cek apakah user adalah OWNER
+    const workspace = await prisma.workspace.findUnique({
+      where: { workspace_id: parseInt(workspace_id) }
+    });
+
+    if (!workspace || workspace.owner_id !== userId) {
+      return NextResponse.json({ message: "Forbidden: Not the owner" }, { status: 403 });
+    }
+
+    const updated = await prisma.workspace.update({
+      where: { workspace_id: parseInt(workspace_id) },
+      data: { workspace_name, workspace_description },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    return NextResponse.json({ message: "Update failed" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE: Menghapus Workspace (Hanya bisa oleh Owner)
+ */
+export async function DELETE(req: Request) {
+  try {
+    const userId = await getUserId();
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("id");
+
+    if (!userId || !workspaceId) {
+      return NextResponse.json({ message: "Invalid Request" }, { status: 400 });
+    }
+
+    const wsIdInt = parseInt(workspaceId);
+
+    // Pastikan yang menghapus adalah OWNER
+    const workspace = await prisma.workspace.findUnique({
+      where: { workspace_id: wsIdInt }
+    });
+
+    if (!workspace || workspace.owner_id !== userId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    // Hapus workspace (Jika di DB diset Cascade, UserWorkspace akan ikut terhapus)
+    await prisma.workspace.delete({
+      where: { workspace_id: wsIdInt }
+    });
+
+    return NextResponse.json({ message: "Workspace deleted" });
+  } catch (error) {
+    return NextResponse.json({ message: "Delete failed" }, { status: 500 });
   }
 }

@@ -29,6 +29,7 @@ model User {
   updated_at      DateTime        @updatedAt
   workspaces      UserWorkspace[]
   level           Level           @relation(fields: [level_id], references: [level_id])
+  owned_workspaces    Workspace[]     @relation("WorkspaceOwner")
 
   @@map("users")
 }
@@ -49,9 +50,12 @@ model UserWorkspace {
 model Workspace {
   workspace_id          Int             @id @default(autoincrement())
   workspace_name        String
-  workspace_description String?
+  workspace_description String
+  owner_id              Int
   created_at            DateTime        @default(now())
   updated_at            DateTime        @updatedAt
+
+  owner                 User            @relation("WorkspaceOwner", fields: [owner_id], references: [user_id])
   edges                 Edge[]
   nodes                 Node[]
   users                 UserWorkspace[]
