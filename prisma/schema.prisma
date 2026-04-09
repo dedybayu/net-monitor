@@ -59,6 +59,7 @@ model Workspace {
   edges                 Edge[]
   nodes                 Node[]
   users                 UserWorkspace[]
+  proxmox_accounts      Proxmox[]
 
   @@map("workspaces")
 }
@@ -110,4 +111,24 @@ model NodeService {
   node                     Node     @relation(fields: [node_id], references: [node_id])
 
   @@map("node_services")
+}
+
+model Proxmox {
+  proxmox_id              Int       @id @default(autoincrement())
+  workspace_id            Int
+  proxmox_connection_name String
+  proxmox_description     String?
+  proxmox_host            String
+  proxmox_port            Int       @default(8006)
+  proxmox_username        String
+  proxmox_token_name      String
+  proxmox_token_secret    String    @db.Text
+  proxmox_is_active       Boolean   @default(true)
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  // Relasi ke Workspace
+  workspace               Workspace @relation(fields: [workspace_id], references: [workspace_id])
+
+  @@map("proxmox")
 }
