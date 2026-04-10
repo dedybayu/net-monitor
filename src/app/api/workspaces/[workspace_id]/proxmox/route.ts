@@ -1,46 +1,37 @@
-// src/app/api/workspaces/[workspaceId]/proxmox/route.ts
+// src/app/api/workspaces/[workspace_id]/proxmox/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma";
 import { encrypt } from "@/src/lib/encryption";
 
-// GET: Mengambil semua koneksi Proxmox dalam satu workspace
-export async function GET(
-  req: Request,
-  { params }: { params: { workspace_id: string } }
-) {
-  try {
-    const { workspace_id } = await params;
-    const workspaceIdInt = parseInt(workspace_id, 10);
-
-    console.log("Fetching Proxmox for Workspace ID:", workspaceIdInt);
-
-    const proxmoxConnections = await prisma.proxmox.findMany({
-      where: { workspace_id: workspaceIdInt },
-      orderBy: { created_at: "desc" },
-    });
-
-    console.log("Proxmox Connections:", proxmoxConnections);
-    return NextResponse.json(proxmoxConnections);
-  } catch {
-    return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
-  }
-}
-
-// POST: Menambah koneksi Proxmox baru
 export async function POST(
   req: Request,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspace_id: string }> } // Definisikan sebagai Promise untuk Next.js 15
 ) {
   try {
-    const { workspaceId } = await params;
-    const workspaceIdInt = parseInt(workspaceId, 10);
+    // 1. Await params terlebih dahulu
+    const resolvedParams = await params;
+    const workspaceIdStr = resolvedParams.workspace_id;
+
+    // 2. Logging untuk debugging (Cek di terminal console)
+    console.log("Raw workspace_id dari params:", workspaceIdStr);
+
+    const workspaceIdInt = parseInt(workspaceIdStr, 10);
+
+    // 3. Validasi apakah hasil parse adalah angka
+    if (isNaN(workspaceIdInt)) {
+      console.error("Gagal parse workspaceId. Value:", workspaceIdStr);
+      return NextResponse.json(
+        { error: `Workspace ID tidak valid. Diterima: ${workspaceIdStr}` },
+        { status: 400 }
+      );
+    }
 
     const body = await req.json();
-    // const workspaceId = parseInt(params.workspaceId);
 
-    // Enkripsi token secret sebelum masuk ke database
+    // 4. Enkripsi
     const secureToken = encrypt(body.proxmox_token_secret);
 
+    // 5. Simpan ke Database
     const newConn = await prisma.proxmox.create({
       data: {
         workspace_id: workspaceIdInt,
@@ -50,15 +41,43 @@ export async function POST(
         proxmox_port: body.proxmox_port || 8006,
         proxmox_username: body.proxmox_username,
         proxmox_token_name: body.proxmox_token_name,
-        proxmox_token_secret: secureToken, // Data sudah terenkripsi
+        proxmox_token_secret: secureToken,
         proxmox_is_active: true,
       },
     });
 
-    // Jangan kirim balik secret yang sudah dienkripsi ke client untuk keamanan
     const { proxmox_token_secret, ...safeResponse } = newConn;
     return NextResponse.json(safeResponse, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Gagal membuat koneksi" }, { status: 500 });
+
+  } catch {
+    console.error("Error creating Proxmox connection:");
+    return NextResponse.json(
+      { error: "Gagal membuat koneksi" },
+      { status: 500 }
+    );
+  }
+}
+
+// Lakukan hal yang sama untuk fungsi GET
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ workspace_id: string }> }
+) {
+  try {
+    const resolvedParams = await params;
+    const workspaceIdInt = parseInt(resolvedParams.workspace_id, 10);
+
+    if (isNaN(workspaceIdInt)) {
+      return NextResponse.json({ error: "Workspace ID tidak valid" }, { status: 400 });
+    }
+
+    const proxmoxConnections = await prisma.proxmox.findMany({
+      where: { workspace_id: workspaceIdInt },
+      orderBy: { created_at: "desc" },
+    });
+
+    return NextResponse.json(proxmoxConnections);
+  } catch  {
+    return NextResponse.json({ error: "Gagal mengambil data" }, { status: 500 });
   }
 }
