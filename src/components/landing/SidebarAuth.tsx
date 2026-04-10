@@ -85,19 +85,8 @@ export default function Navbar() {
           </div>
 
           <ul className="menu p-4 space-y-1 text-base font-semibold">
-            {isLoggedIn ? (
-              <>
                 <li><Link href="/workspaces" onClick={() => setSidebarOpen(false)}><WorkspaceIcon /> Workspace</Link></li>
-                <li><Link href="/proxmox" onClick={() => setSidebarOpen(false)}><ServerIcon /> Proxmox</Link></li>
-                <li><Link href="/#about" onClick={() => setSidebarOpen(false)}><InfoIcon /> Tentang Kami</Link></li>
-              </>
-            ) : (
-              <>
-                <li><Link href="/#home" onClick={() => setSidebarOpen(false)}><HomeIcon /> Beranda</Link></li>
-                <li><Link href="/#features" onClick={() => setSidebarOpen(false)}><StarIcon /> Fitur Kami</Link></li>
-                <li><Link href="/#about" onClick={() => setSidebarOpen(false)}><InfoIcon /> Tentang Kami</Link></li>
-              </>
-            )}
+                <li><Link href="/about" onClick={() => setSidebarOpen(false)}><InfoIcon /> Tentang Kami</Link></li>
           </ul>
         </div>
 
