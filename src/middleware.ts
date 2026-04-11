@@ -41,5 +41,7 @@ export const config = {
     "/login", 
     "/register", 
     "/workspaces/:path*",
-    "/api/workspace/:path*"],
+    "/api/workspace/:path*",
+    "/api/proxmox/:path*",
+  ],
 };
