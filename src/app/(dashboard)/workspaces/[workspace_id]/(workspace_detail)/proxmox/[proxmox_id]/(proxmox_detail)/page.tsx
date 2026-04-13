@@ -127,7 +127,7 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
                 <div className="flex items-center gap-3">
                   {node.local === 1 && (
                     <div className="badge badge-outline badge-info text-[10px] px-1 uppercase tracking-wider">
-                      Local Node
+                      Local
                     </div>
                   )}
                   <div className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-widest ${node.online

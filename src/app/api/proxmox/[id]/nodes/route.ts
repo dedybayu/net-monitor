@@ -48,6 +48,7 @@ export async function GET(
     // Menentukan tipe return secara eksplisit jika perlu, atau biarkan inferensi Axios
     const response = await client.get('/nodes');
 
+    console.log('Proxmox API Response:', response.data); // Debug log untuk response API
     return NextResponse.json(response.data);
 
   } catch (error: unknown) {
