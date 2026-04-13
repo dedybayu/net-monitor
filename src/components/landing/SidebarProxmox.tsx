@@ -7,7 +7,7 @@ import { signOut, useSession } from "next-auth/react"
 
 type ThemeMode = "auto" | "light" | "dark"
 
-export default function Navbar() {
+export default function NavbarProxmox() {
   const pathname = usePathname()
   const params = useParams() // Ambil params dari URL
   const workspaceId = params.workspace_id // Ambil workspace_id dari URL [workspace_id]

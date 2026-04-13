@@ -7,7 +7,7 @@ import { signOut, useSession } from "next-auth/react"
 
 type ThemeMode = "auto" | "light" | "dark"
 
-export default function Navbar() {
+export default function NavbarAuth() {
   const pathname = usePathname()
   const isLoginPage = pathname === "/login"
   const [theme, setTheme] = useState<ThemeMode>("auto")

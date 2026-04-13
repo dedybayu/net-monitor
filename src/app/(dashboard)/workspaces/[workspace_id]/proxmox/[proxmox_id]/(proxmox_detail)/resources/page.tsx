@@ -258,7 +258,7 @@ const ResourceCard = ({ res }: { res: ProxmoxResource }) => {
                 <div className="space-y-1">
                     <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
                         <span>Memory</span>
-                        <span>{isRunning ? formatBytes(res.mem ?? 0) : 'Stopped'}</span>
+                        <span>{isRunning ? `${formatBytes(res.mem ?? 0)} / ${formatBytes(res.maxmem ?? 0)}` : 'Stopped'}</span>
                     </div>
                     <progress
                         className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
