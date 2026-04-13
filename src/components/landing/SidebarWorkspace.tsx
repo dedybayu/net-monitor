@@ -127,7 +127,7 @@ export default function Navbar() {
       </aside>
 
       {/* ── TOP NAVBAR ───────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 lg:left-64 z-30 bg-base-100 shadow-sm px-4 h-16 flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 lg:left-64 z-3000 bg-base-100 shadow-sm px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             className="btn btn-ghost btn-circle lg:hidden"
