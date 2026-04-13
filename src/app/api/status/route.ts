@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCache, registerAndStart } from '@/src/lib/monitor';
+import { getCache, registerAndStart } from '@/src/lib/monitoring/monitor';
 
 export async function POST(request: Request) {
   try {

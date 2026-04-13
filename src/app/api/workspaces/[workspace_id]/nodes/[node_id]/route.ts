@@ -1,7 +1,7 @@
 // File path: app/api/workspace/[workspace_id]/nodes/[node_id]/route.ts
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/src/lib/prisma/client';
 
 interface RouteParams {
   params: Promise<{

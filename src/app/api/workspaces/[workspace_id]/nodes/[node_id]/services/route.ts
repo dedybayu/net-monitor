@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma'; // Sesuaikan path dengan lokasi lib/prisma.ts
+import { prisma } from '@/src/lib/prisma/client'; // Sesuaikan path dengan lokasi lib/prisma.ts
 
 interface RouteParams {
     params: Promise<{

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma'; // Sesuaikan path prisma client Anda
+import { prisma } from '@/src/lib/prisma/client'; // Sesuaikan path prisma client Anda
 
 // Definisi interface untuk kejelasan tipe data
 interface RouteParams {

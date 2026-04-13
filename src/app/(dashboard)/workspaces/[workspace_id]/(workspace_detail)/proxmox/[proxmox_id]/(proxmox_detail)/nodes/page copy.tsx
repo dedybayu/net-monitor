@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use, useCallback } from 'react';
-import { formatBytes, formatUptime } from '@/src/lib/utils';
+import { formatBytes, formatUptime } from '@/src/lib/utils/format';
 
 interface ProxmoxNode {
     node: string;

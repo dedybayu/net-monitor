@@ -1,8 +1,8 @@
 // src/app/api/workspaces/[workspaceId]/proxmox/[proxmoxId]/route.ts
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
-import { encrypt } from "@/src/lib/encryption";
+import { prisma } from "@/src/lib/prisma/client";
+import { encrypt } from "@/src/lib/security/encryption";
 
 
 // GET: Detail satu koneksi Proxmox

@@ -1,7 +1,7 @@
 // src/app/api/workspaces/[workspace_id]/proxmox/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
-import { encrypt } from "@/src/lib/encryption";
+import { prisma } from "@/src/lib/prisma/client";
+import { encrypt } from "@/src/lib/security/encryption";
 
 export async function POST(
   req: Request,
