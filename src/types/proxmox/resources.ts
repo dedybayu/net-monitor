@@ -36,3 +36,15 @@ export interface ProxmoxResource {
   level?: string;         // Untuk node
   "cgroup-mode"?: number; // Untuk node
 }
+
+export interface ProxmoxTask {
+    upid: string;
+    node: string;
+    type: string;
+    user: string;
+    status: string;
+    starttime: number;
+    endtime?: number;
+    id?: string;
+    saved?: string;
+}

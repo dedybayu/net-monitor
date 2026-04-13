@@ -68,9 +68,9 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
     }
 
     return (
-        <div className=" space-y-6 lg:pl-72">
+        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-20 lg:pl-64">
             {/* Header Halaman */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center px-6 mb-8">
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-black uppercase tracking-tight">Nodes List</h1>
                     <div className="flex items-center gap-1.5 bg-success/10 px-2 py-1 rounded-full">
