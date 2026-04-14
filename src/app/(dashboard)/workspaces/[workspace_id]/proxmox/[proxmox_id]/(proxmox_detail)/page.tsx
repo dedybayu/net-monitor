@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, use } from 'react';
 
 // Definisi Interface sesuai JSON Proxmox
@@ -103,41 +104,67 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
           Nodes Detail
         </h2>
 
-        <div className="grid grid-cols-2 gap-4">
-          {nodes.map((node) => {
-            const statusStyle = node.online 
-              ? "bg-success/10 border-success/20 hover:bg-success/20" 
-              : "bg-error/10 border-error/20 hover:bg-error/20";
-            return (
-              <div
-                key={node.id}
-                className={`group p-5 bg-base-100 rounded-xl border border-base-300 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4  ${statusStyle}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-3 h-3 rounded-full ${node.online ? 'bg-success animate-pulse' : 'bg-error'}`}></div>
-                  <div>
-                    <h3 className="font-bold text-lg">{node.name}</h3>
-                    <div className="flex gap-3 text-xs opacity-70">
-                      <span>IP: <span className="font-mono">{node.ip}</span></span>
-                      <span>ID: {node.nodeid}</span>
-                    </div>
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {nodes.sort((a, b) => a.name.localeCompare(b.name)).map((node) => {
+            const isOnline = node.online === 1;
+            const statusStyle = isOnline
+              ? "bg-base-100 border-base-300 hover:border-success/50 hover:shadow-success/5"
+              : "bg-base-100 border-base-300 opacity-70 hover:border-error/50";
 
-                <div className="flex items-center gap-3">
-                  {node.local === 1 && (
-                    <div className="badge badge-outline badge-info text-[10px] px-1 uppercase tracking-wider">
-                      Local
+            return (
+              <Link
+                href={`/workspaces/${proxmoxId}/proxmox/${proxmoxId}/nodes/${node.name}`}
+                key={node.id}
+                className="block group"
+              >
+                <div
+                  className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-4 ${statusStyle}`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Status Indicator */}
+                    <div className="relative flex h-3 w-3">
+                      {isOnline && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                      )}
+                      <span className={`relative inline-flex rounded-full h-3 w-3 ${isOnline ? 'bg-success' : 'bg-error'}`}></span>
                     </div>
-                  )}
-                  <div className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-widest ${node.online
-                      ? 'bg-success/10 text-success border border-success/20'
-                      : 'bg-error/10 text-error border border-error/20'
-                    }`}>
-                    {node.online ? 'Online' : 'Offline'}
+
+                    <div>
+                      <h3 className="font-black uppercase tracking-tight text-lg group-hover:text-primary transition-colors">
+                        {node.name}
+                      </h3>
+                      <div className="flex gap-3 text-[10px] font-bold opacity-40 uppercase tracking-widest mt-0.5">
+                        <span>IP: <span className="font-mono">{node.ip || '-'}</span></span>
+                        <span>ID: {node.nodeid}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {node.local === 1 && (
+                      <div className="badge badge-outline border-base-300 text-[9px] px-2 font-black uppercase tracking-widest opacity-50">
+                        Local
+                      </div>
+                    )}
+                    <div className={`px-4 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-colors ${isOnline
+                        ? 'bg-success/10 text-success border border-success/20 group-hover:bg-success group-hover:text-white'
+                        : 'bg-error/10 text-error border border-error/20'
+                      }`}>
+                      {isOnline ? 'Online' : 'Offline'}
+                    </div>
+
+                    {/* Arrow Icon untuk indikasi klik */}
+                    <svg
+                      className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
