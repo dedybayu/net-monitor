@@ -130,7 +130,7 @@ export async function DELETE(req: Request) {
     });
 
     return NextResponse.json({ message: "Workspace deleted" });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ message: "Delete failed" }, { status: 500 });
   }
 }
