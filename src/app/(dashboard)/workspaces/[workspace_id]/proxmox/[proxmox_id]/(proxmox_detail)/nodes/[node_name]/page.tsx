@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Monitor, Box, ArrowUp, ArrowDown } from "lucide-react";
 
 interface NodeStatus {
   uptime: number;
@@ -31,6 +33,24 @@ interface NodeStatus {
     version: string;
     machine: string;
   };
+}
+
+interface VMItem {
+  vmid: number | string;
+  name: string;
+  status: string;
+  mem: number;
+  maxmem: number;
+  disk: number;
+  maxdisk: number;
+  cpu: number;
+  cpus: number;
+  uptime: number;
+  netin: number;
+  netout: number;
+  diskread: number;
+  diskwrite: number;
+  type?: string;
 }
 
 function formatBytes(bytes: number, decimals = 2) {
@@ -110,6 +130,7 @@ function RadialGauge({
 const REFRESH_INTERVAL = 5;
 
 export default function NodeDetailPage() {
+  const router = useRouter();
   const params = useParams<{
     workspace_id: string;
     proxmox_id: string;
@@ -117,6 +138,11 @@ export default function NodeDetailPage() {
   }>();
 
   const [data, setData] = useState<NodeStatus | null>(null);
+  const [vms, setVms] = useState<VMItem[]>([]);
+  const [cts, setCts] = useState<VMItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"spec" | "vm" | "ct">("spec");
+  const [sortBy, setSortBy] = useState<"id" | "name">("id");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -124,12 +150,21 @@ export default function NodeDetailPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setData(json.data);
+      const [resNode, resVm, resCt] = await Promise.all([
+        fetch(`/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}`),
+        fetch(`/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm`),
+        fetch(`/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/ct`),
+      ]);
+      
+      if (!resNode.ok) throw new Error(`HTTP ${resNode.status}`);
+      const jsonNode = await resNode.json();
+      
+      const jsonVm = resVm.ok ? await resVm.json() : { data: [] };
+      const jsonCt = resCt.ok ? await resCt.json() : { data: [] };
+
+      setData(jsonNode.data);
+      setVms(jsonVm.data || []);
+      setCts(jsonCt.data || []);
       setLastUpdated(new Date());
       setError(null);
     } catch (e) {
@@ -159,6 +194,21 @@ export default function NodeDetailPage() {
   const memPct = data ? usagePct(data.memory.used, data.memory.total) : 0;
   const diskPct = data ? usagePct(data.rootfs.used, data.rootfs.total) : 0;
   const swapPct = data ? usagePct(data.swap.used, data.swap.total) : 0;
+
+  const getSortedItems = useCallback((items: VMItem[]) => {
+    return [...items].sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "id") {
+        comparison = Number(a.vmid) - Number(b.vmid);
+      } else {
+        comparison = (a.name || "").localeCompare(b.name || "");
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [sortBy, sortOrder]);
+
+  const sortedVms = useMemo(() => getSortedItems(vms), [vms, getSortedItems]);
+  const sortedCts = useMemo(() => getSortedItems(cts), [cts, getSortedItems]);
 
   return (
     <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-20 lg:pl-64">
@@ -267,6 +317,31 @@ export default function NodeDetailPage() {
       {/* ─── Dashboard content ─── */}
       {data && (
         <div className="space-y-4">
+
+          {/* Tabs Navigation */}
+          <div className="tabs tabs-boxed bg-base-100 border border-base-300 w-fit">
+            <button
+              onClick={() => setActiveTab("spec")}
+              className={`tab font-mono text-xs font-semibold ${activeTab === "spec" ? "tab-active" : ""}`}
+            >
+              Spesifikasi
+            </button>
+            <button
+              onClick={() => setActiveTab("vm")}
+              className={`tab font-mono text-xs font-semibold ${activeTab === "vm" ? "tab-active" : ""}`}
+            >
+              Virtual Machines
+            </button>
+            <button
+              onClick={() => setActiveTab("ct")}
+              className={`tab font-mono text-xs font-semibold ${activeTab === "ct" ? "tab-active" : ""}`}
+            >
+              LXC Containers
+            </button>
+          </div>
+
+          {activeTab === "spec" && (
+            <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
           {/* Row 1: Gauges + Detailed metrics */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -577,6 +652,262 @@ export default function NodeDetailPage() {
               </div>
             </div>
           </div>
+            </div>
+          )}
+
+          {activeTab === "vm" && (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4 px-1">
+                <div className="flex items-center gap-2">
+                  <Monitor size={16} className="text-base-content/60" />
+                  <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
+                    Virtual Machines ({vms.length})
+                  </h2>
+                </div>
+                {vms.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="select select-bordered select-xs font-mono bg-base-100"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as "id" | "name")}
+                    >
+                      <option value="id">Urut: ID</option>
+                      <option value="name">Urut: Nama</option>
+                    </select>
+                    <button
+                      className="btn btn-square btn-xs btn-outline border-base-300 bg-base-100"
+                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                      title={sortOrder === "asc" ? "Ascending" : "Descending"}
+                    >
+                      {sortOrder === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {sortedVms.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sortedVms.map((vm) => {
+                    const isRunning = vm.status === 'running';
+                    const memUsage = ((vm.mem ?? 0) / (vm.maxmem ?? 1)) * 100;
+                    return (
+                      <div 
+                        key={vm.vmid}
+                        onClick={() => router.push(`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${vm.vmid}`)}
+                        className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex gap-3">
+                                <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
+                                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black opacity-20 uppercase tracking-tighter">
+                                            ID: {vm.vmid}
+                                        </span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-success animate-pulse' : 'bg-error'}`}></span>
+                                    </div>
+                                    <h3 className="font-bold text-sm truncate w-40 uppercase tracking-tight leading-tight">
+                                        {vm.name || 'Unnamed'}
+                                    </h3>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-[9px] font-black block opacity-30 uppercase tracking-tighter">{params.node_name}</span>
+                                <span className={`text-[9px] font-black uppercase tracking-widest ${isRunning ? 'text-success' : 'text-error'}`}>
+                                    {vm.status}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className={`space-y-4 mb-6 transition-opacity ${!isRunning ? 'opacity-40' : ''}`}>
+                            {/* CPU */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <span>CPU Load</span>
+                                    <span>{isRunning ? `${((vm.cpu ?? 0) * 100).toFixed(1)}%` : '0%'}</span>
+                                </div>
+                                <progress
+                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-primary' : ''}`}
+                                    value={isRunning ? (vm.cpu ?? 0) * 100 : 0}
+                                    max="100"
+                                />
+                            </div>
+                            {/* Memory */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <span>Memory</span>
+                                    <span>{isRunning ? `${formatBytes(vm.mem ?? 0)} / ${formatBytes(vm.maxmem ?? 0)}` : 'Stopped'}</span>
+                                </div>
+                                <progress
+                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
+                                    value={isRunning ? memUsage : 0}
+                                    max="100"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-base-200">
+                            <div className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
+                                {isRunning ? `UP: ${formatUptime(vm.uptime ?? 0)}` : 'Offline'}
+                            </div>
+                            <div className="flex gap-2">
+                                <button className="btn btn-ghost btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest" onClick={(e) => e.stopPropagation()}>
+                                    Console
+                                </button>
+                                <button className={`btn btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest px-3 ${isRunning ? 'btn-error btn-outline border-2' : 'btn-success text-white'}`} onClick={(e) => e.stopPropagation()}>
+                                    {isRunning ? 'Stop' : 'Start'}
+                                </button>
+                            </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-base-100 rounded-xl border border-base-300">
+                  <p className="text-base-content/50 text-sm">No Virtual Machines found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "ct" && (
+            <div className="animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4 px-1">
+                <div className="flex items-center gap-2">
+                  <Box size={16} className="text-base-content/60" />
+                  <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
+                    LXC Containers ({cts.length})
+                  </h2>
+                </div>
+                {cts.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="select select-bordered select-xs font-mono bg-base-100"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as "id" | "name")}
+                    >
+                      <option value="id">Urut: ID</option>
+                      <option value="name">Urut: Nama</option>
+                    </select>
+                    <button
+                      className="btn btn-square btn-xs btn-outline border-base-300 bg-base-100"
+                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                      title={sortOrder === "asc" ? "Ascending" : "Descending"}
+                    >
+                      {sortOrder === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {sortedCts.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sortedCts.map((ct) => {
+                    const isRunning = ct.status === 'running';
+                    const memUsage = ((ct.mem ?? 0) / (ct.maxmem ?? 1)) * 100;
+                    return (
+                      <div 
+                        key={ct.vmid}
+                        onClick={() => router.push(`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}/ct/${ct.vmid}`)}
+                        className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex gap-3">
+                                <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-black opacity-20 uppercase tracking-tighter">
+                                            ID: {ct.vmid}
+                                        </span>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-success animate-pulse' : 'bg-error'}`}></span>
+                                    </div>
+                                    <h3 className="font-bold text-sm truncate w-40 uppercase tracking-tight leading-tight">
+                                        {ct.name || 'Unnamed'}
+                                    </h3>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-[9px] font-black block opacity-30 uppercase tracking-tighter">{params.node_name}</span>
+                                <span className={`text-[9px] font-black uppercase tracking-widest ${isRunning ? 'text-success' : 'text-error'}`}>
+                                    {ct.status}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className={`space-y-4 mb-6 transition-opacity ${!isRunning ? 'opacity-40' : ''}`}>
+                            {/* CPU */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <span>CPU Load</span>
+                                    <span>{isRunning ? `${((ct.cpu ?? 0) * 100).toFixed(1)}%` : '0%'}</span>
+                                </div>
+                                <progress
+                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-primary' : ''}`}
+                                    value={isRunning ? (ct.cpu ?? 0) * 100 : 0}
+                                    max="100"
+                                />
+                            </div>
+                            {/* Memory */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <span>Memory</span>
+                                    <span>{isRunning ? `${formatBytes(ct.mem ?? 0)} / ${formatBytes(ct.maxmem ?? 0)}` : 'Stopped'}</span>
+                                </div>
+                                <progress
+                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
+                                    value={isRunning ? memUsage : 0}
+                                    max="100"
+                                />
+                            </div>
+                            {/* Disk */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <span>Disk</span>
+                                    <span>{isRunning ? `${formatBytes(ct.disk ?? 0)} / ${formatBytes(ct.maxdisk ?? 0)}` : 'Stopped'}</span>
+                                </div>
+                                <progress
+                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-accent' : ''}`}
+                                    value={isRunning ? ((ct.disk ?? 0) / (ct.maxdisk ?? 1)) * 100 : 0}
+                                    max="100"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-base-200">
+                            <div className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
+                                {isRunning ? `UP: ${formatUptime(ct.uptime ?? 0)}` : 'Offline'}
+                            </div>
+                            <div className="flex gap-2">
+                                <button className="btn btn-ghost btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest" onClick={(e) => e.stopPropagation()}>
+                                    Console
+                                </button>
+                                <button className={`btn btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest px-3 ${isRunning ? 'btn-error btn-outline border-2' : 'btn-success text-white'}`} onClick={(e) => e.stopPropagation()}>
+                                    {isRunning ? 'Stop' : 'Start'}
+                                </button>
+                            </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-base-100 rounded-xl border border-base-300">
+                  <p className="text-base-content/50 text-sm">No Containers found</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-center gap-2 pt-2 pb-4">
