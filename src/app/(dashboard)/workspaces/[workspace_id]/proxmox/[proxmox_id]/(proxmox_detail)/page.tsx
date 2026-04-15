@@ -20,8 +20,8 @@ interface ProxmoxClusterItem {
   nodeid?: number;
 }
 
-export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmox_id: string }> }) {
-  const { proxmox_id: proxmoxId } = use(params);
+export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmox_id: string, workspace_id: string }> }) {
+  const { proxmox_id: proxmoxId, workspace_id: workspaceId } = use(params);
 
   const [clusterData, setClusterData] = useState<ProxmoxClusterItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +113,7 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
 
             return (
               <Link
-                href={`/workspaces/${proxmoxId}/proxmox/${proxmoxId}/nodes/${node.name}`}
+                href={`/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes/${node.name}`}
                 key={node.id}
                 className="block group"
               >

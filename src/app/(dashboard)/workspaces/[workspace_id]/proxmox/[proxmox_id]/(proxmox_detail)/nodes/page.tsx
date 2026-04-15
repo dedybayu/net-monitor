@@ -17,9 +17,9 @@ interface ProxmoxNode {
     uptime: number;
 }
 
-export default function NodesPage({ params }: { params: Promise<{ proxmox_id: string }> }) {
+export default function NodesPage({ params }: { params: Promise<{ proxmox_id: string, workspace_id: string }> }) {
     // Unwrap params untuk Next.js 15
-    const { proxmox_id: proxmoxId } = use(params);
+    const { proxmox_id: proxmoxId, workspace_id: workspaceId } = use(params);
 
     const [nodes, setNodes] = useState<ProxmoxNode[]>([]);
     const [loading, setLoading] = useState(true);
@@ -111,7 +111,7 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
                     return (
                         <Link
                             key={node.id}
-                            href={`/workspaces/${proxmoxId}/proxmox/${proxmoxId}/nodes/${node.node}`}
+                            href={`/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes/${node.node}`}
                             className={`group block ${!isOnline && 'pointer-events-none'}`}
                         >
 
