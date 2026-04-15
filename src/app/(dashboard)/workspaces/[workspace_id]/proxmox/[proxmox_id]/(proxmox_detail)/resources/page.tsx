@@ -3,22 +3,28 @@
 import { useEffect, useState, use, useMemo } from 'react';
 import { formatBytes, formatUptime } from '@/src/lib/utils/format';
 import { ProxmoxResource } from '@/src/types/proxmox/resources';
+import { useRouter } from "next/navigation";
 
+interface ResourceCardProps {
+    res: ProxmoxResource;
+    workspaceId: string; // Tambahkan ini
+    proxmoxId: string;
+}
 type TabKey = 'virtual' | 'nodes' | 'storage' | 'network';
 
 const TABS: { key: TabKey; label: string }[] = [
-    { key: 'virtual',  label: 'Virtual Guests'  },
-    { key: 'nodes',    label: 'Physical Nodes'  },
-    { key: 'storage',  label: 'Storages'        },
-    { key: 'network',  label: 'Networks (SDN)'  },
+    { key: 'virtual', label: 'Virtual Guests' },
+    { key: 'nodes', label: 'Physical Nodes' },
+    { key: 'storage', label: 'Storages' },
+    { key: 'network', label: 'Networks (SDN)' },
 ];
 
-export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id: string }> }) {
-    const { proxmox_id: proxmoxId } = use(params);
+export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id: string; workspace_id: string }> }) {
+    const { proxmox_id: proxmoxId, workspace_id: workspaceId, proxmox_id: proxmoxId2 } = use(params);
 
     const [resources, setResources] = useState<ProxmoxResource[]>([]);
-    const [loading, setLoading]     = useState(true);
-    const [search, setSearch]       = useState('');
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<TabKey>('virtual');
 
     useEffect(() => {
@@ -27,7 +33,7 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
         const fetchResources = async (isInitial = false) => {
             if (isInitial) setLoading(true);
             try {
-                const res  = await fetch(`/api/proxmox/${proxmoxId}/resources`);
+                const res = await fetch(`/api/proxmox/${proxmoxId}/resources`);
                 const json: { data: ProxmoxResource[] } = await res.json();
                 if (json.data) setResources(json.data);
             } catch (err) {
@@ -48,7 +54,7 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
 
         const filtered = resources.filter(r => {
             const displayName = getResourceName(r);
-            const vmid        = r.vmid?.toString() ?? '';
+            const vmid = r.vmid?.toString() ?? '';
             const searchLower = search.toLowerCase();
             return displayName.includes(searchLower) || vmid.includes(searchLower);
         });
@@ -58,7 +64,7 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
 
         return {
             virtual: filtered.filter(r => r.type === 'qemu' || r.type === 'lxc').sort(sortAz),
-            nodes:   filtered.filter(r => r.type === 'node').sort(sortAz),
+            nodes: filtered.filter(r => r.type === 'node').sort(sortAz),
             storage: filtered.filter(r => r.type === 'storage').sort(sortAz),
             network: filtered.filter(r => r.type === 'sdn').sort(sortAz),
         };
@@ -133,7 +139,7 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
                     ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                             {groupedResources.virtual.map(res => (
-                                <ResourceCard key={res.id} res={res} />
+                                <ResourceCard key={res.id} res={res} workspaceId={workspaceId} proxmoxId={proxmoxId} />
                             ))}
                         </div>
                     ) : (
@@ -200,12 +206,26 @@ const EmptyState = ({ message }: { message: string }) => (
     </div>
 );
 
-const ResourceCard = ({ res }: { res: ProxmoxResource }) => {
-    const isRunning = res.status === 'running';
-    const memUsage  = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
 
+const ResourceCard = ({ res, workspaceId, proxmoxId }: ResourceCardProps) => {
+    const router = useRouter();
+    const isRunning = res.status === 'running';
+    const memUsage = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
+    let handleCardClick = () => { }; // Inisialisasi dengan fungsi kosong
+
+    if (res.type === 'qemu') {
+        handleCardClick = () => {
+            router.push(`/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes/${res.node}/vm/${res.vmid}`);
+        };
+    } else if (res.type === 'lxc') {
+        handleCardClick = () => {
+            router.push(`/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes/${res.node}/ct/${res.vmid}`);
+        };
+    }
     return (
-        <div className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group">
+        <div
+            onClick={handleCardClick}
+            className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group">
             <div className="flex justify-between items-start mb-4">
                 <div className="flex gap-3">
                     <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
@@ -286,9 +306,9 @@ const ResourceCard = ({ res }: { res: ProxmoxResource }) => {
 };
 
 const NodeCard = ({ res }: { res: ProxmoxResource }) => {
-    const isOnline  = res.status === 'online';
-    const cpuUsage  = (res.cpu || 0) * 100;
-    const memUsage  = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
+    const isOnline = res.status === 'online';
+    const cpuUsage = (res.cpu || 0) * 100;
+    const memUsage = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
 
     return (
         <div className="bg-base-100 border border-base-300 rounded-[2rem] p-6 shadow-sm hover:border-primary/30 transition-all">

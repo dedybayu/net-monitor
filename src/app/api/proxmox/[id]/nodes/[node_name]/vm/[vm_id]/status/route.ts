@@ -1,4 +1,4 @@
-// api/proxmox/[id]/[node_name]/vm/[vm_id]/status/route.ts
+// api/proxmox/[id]/nodes/[node_name]/vm/[vm_id]/status/route.ts
 
 import { withProxmoxClient } from '@/src/lib/proxmox/helper';
 import { NextResponse } from 'next/server';
