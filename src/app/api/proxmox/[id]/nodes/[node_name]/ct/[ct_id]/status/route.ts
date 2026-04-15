@@ -7,46 +7,21 @@ interface RouteContext {
   params: Promise<{
     id: string;
     node_name: string;
+    ct_id: string;
   }>;
 }
-
-
-/**
- * @swagger
- * /api/proxmox/{id}/nodes/{node_name}:
- *   get:
- *     tags: [Proxmox]
- *     summary: Mendapatkan data nodes berdasarkan ID Proxmox
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID dari instance Proxmox
- *       - in: path
- *         name: node_name
- *         required: true
- *         schema:
- *           type: string
- *         description: Nama node Proxmox
- *     responses:
- *       200:
- *         description: OK
- */
-
 
 export async function GET(req: Request, { params }: RouteContext) {
   try {
     // Cukup satu kali await untuk mengambil semua parameter
-    const { id, node_name } = await params;
+    const { id, node_name, ct_id } = await params;
 
     if (!id || !node_name) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
     return await withProxmoxClient(id, async (client) => {
-      const response = await client.get(`/nodes/${node_name}/status`);
+      const response = await client.get(`/nodes/${node_name}/lxc/${ct_id}/status/current`);
       
       // Pastikan mengembalikan Response object atau data yang sesuai
       return response.data;

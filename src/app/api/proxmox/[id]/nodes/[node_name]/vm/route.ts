@@ -1,4 +1,4 @@
-// api/proxmox/[id]/[node_name]/route.ts
+// src/app/api/proxmox/[id]/nodes/[node_name]/vm/route.ts
 import { withProxmoxClient } from '@/src/lib/proxmox/helper';
 import { NextResponse } from 'next/server';
 
@@ -10,32 +10,6 @@ interface RouteContext {
   }>;
 }
 
-
-/**
- * @swagger
- * /api/proxmox/{id}/nodes/{node_name}:
- *   get:
- *     tags: [Proxmox]
- *     summary: Mendapatkan data nodes berdasarkan ID Proxmox
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID dari instance Proxmox
- *       - in: path
- *         name: node_name
- *         required: true
- *         schema:
- *           type: string
- *         description: Nama node Proxmox
- *     responses:
- *       200:
- *         description: OK
- */
-
-
 export async function GET(req: Request, { params }: RouteContext) {
   try {
     // Cukup satu kali await untuk mengambil semua parameter
@@ -46,7 +20,7 @@ export async function GET(req: Request, { params }: RouteContext) {
     }
 
     return await withProxmoxClient(id, async (client) => {
-      const response = await client.get(`/nodes/${node_name}/status`);
+      const response = await client.get(`/nodes/${node_name}/qemu`);
       
       // Pastikan mengembalikan Response object atau data yang sesuai
       return response.data;
