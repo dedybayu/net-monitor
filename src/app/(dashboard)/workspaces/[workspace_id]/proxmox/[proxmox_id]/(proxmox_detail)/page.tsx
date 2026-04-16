@@ -67,8 +67,8 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
   const onlineNodesCount = nodes.filter(n => n.online === 1).length;
 
   return (
-    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-64 pt-16 transition-all">
-      <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-64 pt-6 transition-all">
+      <div className="p-6 md:p-10 max-w-xxl mx-auto">
         {/* ── HEADER ── */}
         <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>

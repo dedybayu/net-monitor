@@ -4,23 +4,25 @@ import { useEffect, useState, use, useMemo } from 'react';
 import { formatBytes, formatUptime } from '@/src/lib/utils/format';
 import { ProxmoxResource } from '@/src/types/proxmox/resources';
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
+import { ArrowLeft, Server, Activity, Cpu, HardDrive, LayoutTemplate, Network, Search, XCircle, Box, Database, Monitor } from 'lucide-react';
 
 interface ResourceCardProps {
     res: ProxmoxResource;
-    workspaceId: string; // Tambahkan ini
+    workspaceId: string;
     proxmoxId: string;
 }
 type TabKey = 'virtual' | 'nodes' | 'storage' | 'network';
 
-const TABS: { key: TabKey; label: string }[] = [
-    { key: 'virtual', label: 'Virtual Guests' },
-    { key: 'nodes', label: 'Physical Nodes' },
-    { key: 'storage', label: 'Storages' },
-    { key: 'network', label: 'Networks (SDN)' },
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: 'virtual', label: 'Virtual Guests', icon: <Box size={14} /> },
+    { key: 'nodes', label: 'Physical Nodes', icon: <Server size={14} /> },
+    { key: 'storage', label: 'Storages', icon: <Database size={14} /> },
+    { key: 'network', label: 'Networks (SDN)', icon: <Network size={14} /> },
 ];
 
 export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id: string; workspace_id: string }> }) {
-    const { proxmox_id: proxmoxId, workspace_id: workspaceId, proxmox_id: proxmoxId2 } = use(params);
+    const { proxmox_id: proxmoxId, workspace_id: workspaceId } = use(params);
 
     const [resources, setResources] = useState<ProxmoxResource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -71,123 +73,141 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
     }, [resources, search]);
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center lg:pl-72 bg-base-200">
+        <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-64 pt-16">
             <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] opacity-40 animate-pulse">Syncing Resources...</p>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-base-200 text-base-content font-sans p-6 pt-20 lg:pl-72">
-
-            {/* ── Header & Search ── */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">
-                        Cluster Resources
-                    </h1>
-                    <p className="text-[10px] opacity-50 font-bold uppercase tracking-[0.3em] mt-2">
-                        Real-time infrastructure monitoring
-                    </p>
+        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-64 pt-10 transition-all">
+            <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
+                {/* ── Header ── */}
+                <div className="mb-10">
+                    <div className="flex items-center gap-3 mb-3">
+                        <Link href={`/workspaces/${workspaceId}/proxmox/${proxmoxId}`} className="btn btn-sm btn-ghost btn-circle bg-base-300/50">
+                            <ArrowLeft size={16} />
+                        </Link>
+                        <p className="text-[10px] font-black tracking-[0.35em] uppercase opacity-40 m-0 flex items-center gap-2">
+                            <span className="inline-block h-px w-6 bg-primary"></span>
+                            Resource Explorer
+                        </p>
+                    </div>
+                
+                    <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
+                        <div>
+                            <h1 className="text-5xl font-black tracking-tighter leading-none text-base-content mb-2">
+                                Cluster <span className="text-primary">Resources</span>
+                            </h1>
+                            <p className="text-sm opacity-50 font-medium">
+                                Real-time infrastructure monitoring across all datacenters
+                            </p>
+                        </div>
+                        <div className="relative w-full xl:w-96">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40">
+                                <Search size={18} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search by Name or ID..."
+                                className="input input-lg w-full rounded-2xl bg-base-100 shadow-sm border-base-300 focus:border-primary pl-12 font-bold transition-all placeholder:font-medium placeholder:uppercase placeholder:tracking-widest placeholder:text-xs"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
                 </div>
-                <div className="relative w-full md:w-80">
-                    <input
-                        type="text"
-                        placeholder="Search Name or ID..."
-                        className="input input-bordered w-full rounded-2xl bg-base-100 shadow-sm focus:input-primary transition-all"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
+
+                {/* ── Tab Bar Segmented Control ── */}
+                <div className="flex gap-2 bg-base-100 p-2 rounded-2xl border border-base-300 w-full overflow-x-auto mb-8 shadow-sm">
+                    {TABS.map(tab => {
+                        const count = groupedResources[tab.key].length;
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`
+                                    flex-1 flex items-center justify-center gap-3 px-6 py-4 text-[10px] sm:text-xs font-black uppercase
+                                    tracking-widest rounded-xl whitespace-nowrap transition-all duration-300
+                                    ${isActive
+                                        ? 'bg-primary text-primary-content shadow-lg shadow-primary/20'
+                                        : 'text-base-content/50 hover:text-base-content hover:bg-base-200/50'}
+                                `}
+                            >
+                                <span className={isActive ? 'opacity-100' : 'opacity-50'}>{tab.icon}</span>
+                                {tab.label}
+                                <span className={`
+                                    text-[9px] font-black px-2 py-1 rounded-full ml-1 transition-colors
+                                    ${isActive
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-base-300 text-base-content/50'}
+                                `}>
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
+
+                {/* ── Tab Content ── */}
+
+                {/* Virtual Guests */}
+                {activeTab === 'virtual' && (
+                    groupedResources.virtual.length > 0
+                        ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+                                {groupedResources.virtual.map(res => (
+                                    <ResourceCard key={res.id} res={res} workspaceId={workspaceId} proxmoxId={proxmoxId} />
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState message="No virtual guests found matching the criteria" />
+                        )
+                )}
+
+                {/* Physical Nodes */}
+                {activeTab === 'nodes' && (
+                    groupedResources.nodes.length > 0
+                        ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {groupedResources.nodes.map(res => (
+                                    <NodeCard key={res.id} res={res} />
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState message="No physical nodes found matching the criteria" />
+                        )
+                )}
+
+                {/* Storages */}
+                {activeTab === 'storage' && (
+                    groupedResources.storage.length > 0
+                        ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                                {groupedResources.storage.map(res => (
+                                    <SimpleResourceCard key={res.id} res={res} icon="storage" />
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState message="No storage units found matching the criteria" />
+                        )
+                )}
+
+                {/* Networks (SDN) */}
+                {activeTab === 'network' && (
+                    groupedResources.network.length > 0
+                        ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                                {groupedResources.network.map(res => (
+                                    <SimpleResourceCard key={res.id} res={res} icon="network" />
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState message="No networks found matching the criteria" />
+                        )
+                )}
             </div>
-
-            {/* ── Tab Bar ── */}
-            <div className="flex gap-1 border-b border-base-300 mb-8 overflow-x-auto">
-                {TABS.map(tab => {
-                    const count = groupedResources[tab.key].length;
-                    const isActive = activeTab === tab.key;
-                    return (
-                        <button
-                            key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
-                            className={`
-                                flex items-center gap-2 px-4 py-2.5 text-[10px] font-black uppercase
-                                tracking-widest rounded-t-xl border-b-2 whitespace-nowrap transition-all
-                                ${isActive
-                                    ? 'border-primary text-base-content'
-                                    : 'border-transparent text-base-content/40 hover:text-base-content/60 hover:bg-base-300/40'}
-                            `}
-                        >
-                            {tab.label}
-                            <span className={`
-                                text-[9px] font-black px-1.5 py-0.5 rounded-full
-                                ${isActive
-                                    ? 'bg-primary/15 text-primary'
-                                    : 'bg-base-300 text-base-content/40'}
-                            `}>
-                                {count}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* ── Tab Content ── */}
-
-            {/* Virtual Guests */}
-            {activeTab === 'virtual' && (
-                groupedResources.virtual.length > 0
-                    ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {groupedResources.virtual.map(res => (
-                                <ResourceCard key={res.id} res={res} workspaceId={workspaceId} proxmoxId={proxmoxId} />
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyState message="No virtual guests found" />
-                    )
-            )}
-
-            {/* Physical Nodes */}
-            {activeTab === 'nodes' && (
-                groupedResources.nodes.length > 0
-                    ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                            {groupedResources.nodes.map(res => (
-                                <NodeCard key={res.id} res={res} />
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyState message="No nodes found" />
-                    )
-            )}
-
-            {/* Storages */}
-            {activeTab === 'storage' && (
-                groupedResources.storage.length > 0
-                    ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {groupedResources.storage.map(res => (
-                                <SimpleResourceCard key={res.id} res={res} icon="storage" />
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyState message="No storage found" />
-                    )
-            )}
-
-            {/* Networks (SDN) */}
-            {activeTab === 'network' && (
-                groupedResources.network.length > 0
-                    ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {groupedResources.network.map(res => (
-                                <SimpleResourceCard key={res.id} res={res} icon="network" />
-                            ))}
-                        </div>
-                    ) : (
-                        <EmptyState message="No networks found" />
-                    )
-            )}
         </div>
     );
 }
@@ -197,12 +217,12 @@ export default function ResourcesPage({ params }: { params: Promise<{ proxmox_id
 // ─────────────────────────────────────────────
 
 const EmptyState = ({ message }: { message: string }) => (
-    <div className="flex flex-col items-center justify-center py-24 opacity-30">
-        <svg className="w-10 h-10 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p className="text-[11px] font-black uppercase tracking-widest">{message}</p>
+    <div className="flex flex-col items-center justify-center p-24 bg-base-100/50 rounded-[3rem] border-2 border-dashed border-base-300 opacity-60">
+        <div className="bg-base-200 p-6 rounded-full mb-6">
+            <Search size={48} className="opacity-20 text-primary" />
+        </div>
+        <h3 className="font-black text-2xl tracking-tight uppercase opacity-40 mb-2">Not Found</h3>
+        <p className="text-xs font-bold uppercase tracking-widest opacity-50">{message}</p>
     </div>
 );
 
@@ -211,7 +231,9 @@ const ResourceCard = ({ res, workspaceId, proxmoxId }: ResourceCardProps) => {
     const router = useRouter();
     const isRunning = res.status === 'running';
     const memUsage = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
-    let handleCardClick = () => { }; // Inisialisasi dengan fungsi kosong
+    const cpuUsage = (res.cpu ?? 0) * 100;
+    
+    let handleCardClick = () => { };
 
     if (res.type === 'qemu') {
         handleCardClick = () => {
@@ -222,81 +244,84 @@ const ResourceCard = ({ res, workspaceId, proxmoxId }: ResourceCardProps) => {
             router.push(`/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes/${res.node}/ct/${res.vmid}`);
         };
     }
+    
     return (
         <div
             onClick={handleCardClick}
-            className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group">
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex gap-3">
-                    <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
-                        {res.type === 'qemu' ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                        )}
+            className={`relative overflow-hidden bg-base-100 border rounded-[2rem] p-6 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-xl ${
+                isRunning ? 'border-base-300 hover:border-primary/40 hover:shadow-primary/5' : 'border-base-300 opacity-80 hover:border-error/40'
+            }`}
+        >
+            {/* Top Indicator Line */}
+            {isRunning && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success/0 via-success/50 to-success/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            )}
+            
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex gap-4">
+                    <div className={`p-3.5 rounded-2xl border transition-colors shadow-inner flex items-center justify-center ${
+                         isRunning ? 'bg-success/10 text-success border-success/20' : 'bg-base-200 text-base-content/30 border-base-300'
+                    }`}>
+                        {res.type === 'qemu' ? <Monitor size={22} /> : <Box size={22} />}
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black opacity-20 uppercase tracking-tighter">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[9px] font-black bg-base-200 border border-base-300 px-2 py-0.5 rounded-md opacity-60 uppercase tracking-widest">
                                 ID: {res.vmid}
                             </span>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-success animate-pulse' : 'bg-error'}`}></span>
+                            {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>}
                         </div>
-                        <h3 className="font-bold text-sm truncate w-40 uppercase tracking-tight leading-tight">
+                        <h3 className="font-black text-lg truncate w-32 md:w-36 uppercase tracking-tight leading-none group-hover:text-primary transition-colors">
                             {res.name || 'Unnamed'}
                         </h3>
                     </div>
                 </div>
-                <div className="text-right">
-                    <span className="text-[9px] font-black block opacity-30 uppercase tracking-tighter">{res.node}</span>
-                    <span className={`text-[9px] font-black uppercase tracking-widest ${isRunning ? 'text-success' : 'text-error'}`}>
+                <div className="text-right flex flex-col items-end">
+                    <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest mb-1 ${
+                        isRunning ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                    }`}>
                         {res.status}
+                    </span>
+                    <span className="text-[8px] font-bold block opacity-40 uppercase tracking-tighter flex items-center gap-1">
+                        <Server size={10} /> {res.node}
                     </span>
                 </div>
             </div>
 
-            <div className={`space-y-4 mb-6 transition-opacity ${!isRunning && 'opacity-40'}`}>
+            <div className={`space-y-4 mb-6 transition-opacity ${!isRunning && 'opacity-40 mix-blend-luminosity'}`}>
                 {/* CPU */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                     <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                        <span>CPU Load</span>
-                        <span>{isRunning ? `${((res.cpu ?? 0) * 100).toFixed(1)}%` : '0%'}</span>
+                        <span className="flex items-center gap-1"><Cpu size={12}/> CPU Load</span>
+                        <span>{isRunning ? `${cpuUsage.toFixed(1)}%` : '0%'}</span>
                     </div>
-                    <progress
-                        className={`progress h-1.5 w-full ${isRunning ? 'progress-primary' : ''}`}
-                        value={isRunning ? (res.cpu ?? 0) * 100 : 0}
-                        max="100"
-                    />
+                    <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden border border-base-300/50">
+                        <div className={`h-full rounded-full transition-all duration-1000 ${cpuUsage > 80 ? 'bg-error' : 'bg-primary'}`} style={{ width: `${isRunning ? cpuUsage : 0}%` }}></div>
+                    </div>
                 </div>
                 {/* Memory */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                     <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                        <span>Memory</span>
-                        <span>{isRunning ? `${formatBytes(res.mem ?? 0)} / ${formatBytes(res.maxmem ?? 0)}` : 'Stopped'}</span>
+                        <span className="flex items-center gap-1"><LayoutTemplate size={12}/> Memory</span>
+                        <span>{isRunning ? `${formatBytes(res.mem ?? 0)} / ${formatBytes(res.maxmem ?? 0)}` : '-'}</span>
                     </div>
-                    <progress
-                        className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
-                        value={isRunning ? memUsage : 0}
-                        max="100"
-                    />
+                    <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden border border-base-300/50">
+                        <div className={`h-full rounded-full transition-all duration-1000 ${memUsage > 85 ? 'bg-error' : 'bg-info'}`} style={{ width: `${isRunning ? memUsage : 0}%` }}></div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-base-200">
+            <div className="flex justify-between items-center pt-5 border-t border-base-200">
                 <div className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
                     {isRunning ? `UP: ${formatUptime(res.uptime ?? 0)}` : 'Offline'}
                 </div>
                 <div className="flex gap-2">
-                    <button className="btn btn-ghost btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest">
+                    <button className="btn btn-ghost bg-base-200/50 rounded-xl font-black uppercase tracking-widest text-[9px] px-3 border-none shadow-sm h-8 min-h-8">
                         Console
                     </button>
-                    <button className={`btn btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest px-3 ${isRunning ? 'btn-error btn-outline border-2' : 'btn-success text-white'}`}>
+                    <button className={`btn rounded-xl font-black uppercase tracking-widest text-[9px] px-4 shadow-sm h-8 min-h-8 border-none ${
+                        isRunning ? 'bg-error/10 text-error hover:bg-error hover:text-white' : 'bg-success text-white hover:bg-success/90'
+                    }`}>
                         {isRunning ? 'Stop' : 'Start'}
                     </button>
                 </div>
@@ -311,31 +336,50 @@ const NodeCard = ({ res }: { res: ProxmoxResource }) => {
     const memUsage = ((res.mem ?? 0) / (res.maxmem ?? 1)) * 100;
 
     return (
-        <div className="bg-base-100 border border-base-300 rounded-[2rem] p-6 shadow-sm hover:border-primary/30 transition-all">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h3 className="font-black uppercase tracking-tighter text-xl leading-none">{res.node}</h3>
-                    <div className="badge badge-ghost badge-xs text-[8px] font-bold uppercase mt-2 opacity-50 tracking-widest">
-                        Physical Host
+        <div className={`relative overflow-hidden bg-base-100 border rounded-[2rem] p-6 shadow-sm transition-all group ${
+            isOnline ? 'border-base-300 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl' : 'opacity-80 hover:border-error/30'
+        }`}>
+            {isOnline && (
+                <div className="absolute -top-6 -right-6 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500 pointer-events-none">
+                    <Server size={140} />
+                </div>
+            )}
+            
+            <div className="flex justify-between items-center mb-6 relative z-10">
+                <div className="flex gap-3 items-center">
+                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border shadow-inner ${
+                         isOnline ? 'bg-success/10 text-success border-success/20' : 'bg-base-300 text-base-content/30 border-base-300'
+                    }`}>
+                        <Server size={22} />
+                    </div>
+                    <div>
+                        <h3 className="font-black uppercase tracking-tighter text-xl leading-none group-hover:text-primary transition-colors">{res.node}</h3>
+                        <div className="badge badge-ghost badge-xs bg-base-200 text-[8px] font-bold uppercase mt-1 opacity-50 tracking-widest border-none">
+                            Physical Host
+                        </div>
                     </div>
                 </div>
-                <div className={`h-3 w-3 rounded-full ${isOnline ? 'bg-success shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-error'}`}></div>
+                <div className={`h-3 w-3 rounded-full ${isOnline ? 'bg-success shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-error'}`}></div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-base-200/50 p-3 rounded-2xl text-center">
-                    <div className="text-[8px] font-black opacity-40 uppercase tracking-widest mb-1">CPU Load</div>
-                    <div className="text-lg font-black tracking-tighter">{cpuUsage.toFixed(1)}%</div>
+            <div className={`grid grid-cols-2 gap-3 mb-6 relative z-10 ${!isOnline && 'opacity-40 mix-blend-luminosity'}`}>
+                <div className="bg-base-200/50 border border-base-300/50 p-4 rounded-2xl text-center">
+                    <div className="text-[9px] font-black opacity-40 uppercase tracking-widest mb-1 flex justify-center items-center gap-1">
+                        <Cpu size={12} className="text-primary"/> CPU
+                    </div>
+                    <div className="text-xl font-black tracking-tighter">{cpuUsage.toFixed(1)}%</div>
                 </div>
-                <div className="bg-base-200/50 p-3 rounded-2xl text-center">
-                    <div className="text-[8px] font-black opacity-40 uppercase tracking-widest mb-1">RAM Use</div>
-                    <div className="text-lg font-black tracking-tighter">{memUsage.toFixed(0)}%</div>
+                <div className="bg-base-200/50 border border-base-300/50 p-4 rounded-2xl text-center">
+                    <div className="text-[9px] font-black opacity-40 uppercase tracking-widest mb-1 flex justify-center items-center gap-1">
+                        <LayoutTemplate size={12} className="text-info"/> RAM
+                    </div>
+                    <div className="text-xl font-black tracking-tighter">{memUsage.toFixed(0)}%</div>
                 </div>
             </div>
 
-            <div className="flex justify-between items-center opacity-40">
+            <div className="flex justify-between items-center opacity-40 pt-2 border-t border-base-200 mt-2">
                 <span className="text-[9px] font-black uppercase tracking-widest">Uptime</span>
-                <span className="text-[9px] font-mono font-bold">
+                <span className="text-[10px] font-mono font-bold">
                     {isOnline ? formatUptime(res.uptime ?? 0) : '-'}
                 </span>
             </div>
@@ -344,28 +388,22 @@ const NodeCard = ({ res }: { res: ProxmoxResource }) => {
 };
 
 const SimpleResourceCard = ({ res, icon }: { res: ProxmoxResource; icon: 'storage' | 'network' }) => (
-    <div className="bg-base-100 p-4 rounded-2xl border border-base-300 flex items-center gap-4 hover:shadow-sm transition-all group">
-        <div className="bg-base-200 p-3 rounded-xl text-primary transition-colors group-hover:bg-primary/10">
-            {icon === 'storage' ? (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                        d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zM4 7h16M4 12h16" />
-                </svg>
-            ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
-            )}
+    <div className="bg-base-100 p-6 rounded-[2rem] border border-base-300 flex items-center gap-5 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 transition-all group overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+           {icon === 'storage' ? <Database size={100} /> : <Network size={100} />}
         </div>
-        <div className="overflow-hidden">
-            <h4 className="font-black text-xs truncate uppercase tracking-tight leading-none mb-1">
+        <div className="bg-base-200 shadow-inner border border-base-300 p-4 rounded-2xl text-primary transition-colors group-hover:bg-primary/10 group-hover:border-primary/20 relative z-10">
+            {icon === 'storage' ? <Database size={24} /> : <Network size={24} />}
+        </div>
+        <div className="overflow-hidden relative z-10">
+            <h4 className="font-black text-sm truncate uppercase tracking-tight leading-none mb-1 group-hover:text-primary transition-colors">
                 {res.storage || res.sdn || 'Unknown'}
             </h4>
-            <div className="flex items-center gap-2">
-                <span className="text-[9px] font-bold opacity-30 uppercase">{res.node}</span>
-                <span className="text-[14px] opacity-10">•</span>
-                <span className="text-[9px] font-black uppercase text-primary/60">{res.status || 'Active'}</span>
+            <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[9px] font-black opacity-40 bg-base-200 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1">
+                    <Server size={10}/> {res.node}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-primary/80">{res.status || 'Active'}</span>
             </div>
         </div>
     </div>
