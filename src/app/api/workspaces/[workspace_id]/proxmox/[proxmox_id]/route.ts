@@ -1,17 +1,21 @@
 // src/app/api/workspaces/[workspaceId]/proxmox/[proxmoxId]/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/src/lib/prisma/client";
 import { encrypt } from "@/src/lib/security/encryption";
 
+// Definisikan tipe params sesuai dengan folder dynamic route kamu
+type RouteParams = {
+  params: Promise<{ workspaceId: string; proxmoxId: string }>;
+};
 
 // GET: Detail satu koneksi Proxmox
-export async function GET(
-  req: Request,
-  { params }: { params: { proxmox_id: string } }
-) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.proxmox_id);
+    // 1. Await params
+    const { proxmoxId } = await params;
+    const id = parseInt(proxmoxId);
+
     const connection = await prisma.proxmox.findUnique({
       where: { proxmox_id: id },
     });
@@ -25,12 +29,12 @@ export async function GET(
 }
 
 // PATCH: Update data koneksi (Partial Update)
-export async function PATCH(
-  req: Request,
-  { params }: { params: { proxmoxId: string } }
-) {
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.proxmoxId);
+    // 1. Await params
+    const { proxmoxId } = await params;
+    const id = parseInt(proxmoxId);
+    
     const body = await req.json();
 
     // Jika user mengupdate password/token, enkripsi ulang
@@ -51,19 +55,18 @@ export async function PATCH(
 }
 
 // DELETE: Menghapus koneksi Proxmox
-export async function DELETE(
-  req: Request,
-  { params }: { params: { proxmox_id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
-    const id = parseInt(params.proxmox_id);
+    // 1. Await params
+    const { proxmoxId } = await params;
+    const id = parseInt(proxmoxId);
 
     await prisma.proxmox.delete({
       where: { proxmox_id: id },
     });
 
     return NextResponse.json({ message: "Koneksi berhasil dihapus" });
-  } catch  {
+  } catch {
     return NextResponse.json({ error: "Gagal menghapus data" }, { status: 500 });
   }
 }
