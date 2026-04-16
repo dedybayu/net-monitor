@@ -6,15 +6,15 @@ import { encrypt } from "@/src/lib/security/encryption";
 
 // Definisikan tipe params sesuai dengan folder dynamic route kamu
 type RouteParams = {
-  params: Promise<{ workspaceId: string; proxmoxId: string }>;
+  params: Promise<{ workspace_id: string; proxmox_id: string }>;
 };
 
 // GET: Detail satu koneksi Proxmox
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     // 1. Await params
-    const { proxmoxId } = await params;
-    const id = parseInt(proxmoxId);
+    const { proxmox_id } = await params;
+    const id = parseInt(proxmox_id);
 
     const connection = await prisma.proxmox.findUnique({
       where: { proxmox_id: id },
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
     // 1. Await params
-    const { proxmoxId } = await params;
-    const id = parseInt(proxmoxId);
+    const { proxmox_id } = await params;
+    const id = parseInt(proxmox_id);
     
     const body = await req.json();
 
@@ -58,8 +58,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
     // 1. Await params
-    const { proxmoxId } = await params;
-    const id = parseInt(proxmoxId);
+    const { proxmox_id } = await params;
+    const id = parseInt(proxmox_id);
 
     await prisma.proxmox.delete({
       where: { proxmox_id: id },
