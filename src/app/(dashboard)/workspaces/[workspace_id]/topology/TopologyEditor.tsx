@@ -143,19 +143,19 @@ function TopologyEditorInner(props: {
   return (
     /*
       Menggunakan fixed positioning yang memperhitungkan:
-      - top-16   : tinggi top navbar
+      - top-0    : menutupi sisa ruang di bawah navbar (full bleed)
       - left-0   : mobile (sidebar tersembunyi)
-      - lg:left-64: desktop (sidebar lebar 64)
+      - lg:left-72: desktop (sidebar lebar 72)
       - right-0 + bottom-0: penuh ke kanan dan bawah
       Ini menghindari masalah h-screen yang overflow saat ada offset.
     */
-    <div className="fixed top-16 left-0 lg:left-64 right-0 bottom-0 flex flex-col bg-base-200 text-base-content overflow-hidden">
+    <div className="fixed top-0 left-0 lg:left-72 right-0 bottom-0 flex flex-col bg-base-200 text-base-content overflow-hidden">
 
       {/* Canvas Area */}
       <div className="flex-grow relative bg-base-300/50">
 
         {/* ── FLOATING NAVBAR ─────────────────────────────────────────── */}
-        <div className="absolute top-4 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
+        <div className="absolute top-24 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
           {/* Left Side */}
           <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
             <Link

@@ -6,8 +6,9 @@ import React, { useEffect, useState, use } from "react";
 import {
   Cpu, MemoryStick, HardDrive, Activity,
   ArrowUpCircle, ArrowDownCircle, Settings,
-  Zap, Monitor, Clock, Play, AlertTriangle,
+  Zap, Monitor, Clock, Play, AlertTriangle, ArrowLeft, Terminal, RefreshCw, PowerOff, RotateCcw
 } from "lucide-react";
+import Link from 'next/link';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,6 @@ interface ProxmoxSupport {
   [key: string]: boolean | string | number;
 }
 
-/** Shape saat VM running (semua field lengkap) */
 interface VMStatusRunning {
   status: "running";
   name: string;
@@ -52,7 +52,6 @@ interface VMStatusRunning {
   "running-qemu": string;
 }
 
-/** Shape saat VM stopped (metrik resource semua 0, blockstat tidak ada) */
 interface VMStatusStopped {
   status: "stopped";
   name: string;
@@ -103,7 +102,11 @@ const formatUptime = (seconds: number): string => {
   const d = Math.floor(seconds / (3600 * 24));
   const h = Math.floor((seconds % (3600 * 24)) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return `${d}d ${h}h ${m}m`;
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  return parts.join(" ") || "< 1m";
 };
 
 // ─── MetricCard ───────────────────────────────────────────────────────────────
@@ -120,33 +123,39 @@ interface MetricCardProps {
   disabled?: boolean;
 }
 
-const colorConfig: Record<MetricColor, { badge: string; progress: string }> = {
-  blue:    { badge: "badge-info",       progress: "progress-info"      },
-  purple:  { badge: "badge-secondary",  progress: "progress-secondary" },
-  orange:  { badge: "badge-warning",    progress: "progress-warning"   },
-  emerald: { badge: "badge-success",    progress: "progress-success"   },
+const colorConfig: Record<MetricColor, { badge: string; colorClass: string }> = {
+  blue:    { badge: "bg-info/10 text-info",       colorClass: "info"      },
+  purple:  { badge: "bg-secondary/10 text-secondary",  colorClass: "secondary" },
+  orange:  { badge: "bg-warning/10 text-warning",    colorClass: "warning"   },
+  emerald: { badge: "bg-success/10 text-success",    colorClass: "success"   },
 };
 
 function MetricCard({ title, value, subValue, icon, color, progress, disabled = false }: MetricCardProps) {
-  const { badge, progress: progressClass } = colorConfig[color];
+  const { badge, colorClass } = colorConfig[color];
 
   return (
-    <div className={`card bg-base-100 border border-base-200 shadow-none ${disabled ? "opacity-60" : ""}`}>
-      <div className="card-body p-5 gap-2">
-        <span className={`badge ${disabled ? "badge-ghost" : badge} badge-sm gap-1 self-start`}>
-          {icon}
-          {title}
-        </span>
-        <p className={`text-2xl font-semibold ${disabled ? "text-base-content/40" : "text-base-content"}`}>
-          {value}
-        </p>
-        <p className="text-xs text-base-content/50 font-medium">{subValue}</p>
+    <div className={`relative overflow-hidden bg-base-100 border border-base-300 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group ${disabled ? "opacity-60 mix-blend-luminosity hover:border-base-300 hover:shadow-sm hover:translate-y-0" : `hover:border-${colorClass}/40 hover:shadow-${colorClass}/5`}`}>
+      {!disabled && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success/0 via-success/50 to-success/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      )}
+      <div className={`absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-10 transition-opacity text-${colorClass} pointer-events-none`}>
+          {icon && React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 100 })}
+      </div>
+      <div className="relative z-10 flex flex-col gap-4">
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-inner ${disabled ? "bg-base-200 text-base-content/40" : badge}`}>
+          {icon && React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 20 })}
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">{title}</p>
+          <p className={`text-3xl font-black tracking-tighter leading-none mb-1.5 ${disabled ? "text-base-content/40" : "text-base-content"}`}>
+            {value}
+          </p>
+          <p className="text-[10px] font-bold text-base-content/50 uppercase tracking-widest">{subValue}</p>
+        </div>
         {progress !== undefined && (
-          <progress
-            className={`progress ${disabled ? "progress-ghost" : progressClass} h-1.5 mt-1`}
-            value={disabled ? 0 : Math.min(progress, 100)}
-            max={100}
-          />
+          <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden border border-base-300/50 mt-1">
+            <div className={`h-full rounded-full transition-all duration-1000 bg-${colorClass} ${disabled ? "bg-base-content/20" : ""}`} style={{ width: `${disabled ? 0 : Math.min(progress, 100)}%` }}></div>
+          </div>
         )}
       </div>
     </div>
@@ -157,13 +166,12 @@ function MetricCard({ title, value, subValue, icon, color, progress, disabled = 
 
 function StoppedBanner() {
   return (
-    <div className="alert alert-warning border border-warning/30 shadow-none rounded-xl">
-      <AlertTriangle size={16} />
+    <div className="alert alert-warning bg-warning/10 border-warning/20 text-warning rounded-3xl shadow-sm mb-6">
+      <AlertTriangle size={24} />
       <div>
-        <p className="font-semibold text-sm">VM sedang tidak aktif</p>
-        <p className="text-xs opacity-80 mt-0.5">
-          Metrik resource tidak tersedia saat VM dalam kondisi stopped.
-          Hanya informasi konfigurasi yang ditampilkan.
+        <h3 className="font-black tracking-tight text-lg">Virtual Machine Offline</h3>
+        <p className="text-xs font-medium opacity-80">
+          Metrik instruksi load tidak tersedia saat status mesin mati. Hanya konfigurasi spesifikasi inti yang ditampilkan.
         </p>
       </div>
     </div>
@@ -182,199 +190,244 @@ export default function VMDetailPage({
   const [data, setData] = useState<VMStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  
+  const REFRESH_INTERVAL = 5;
+  const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
+
+  const fetchStatus = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${params.vm_id}/status`
+      );
+      const json = await res.json();
+      setData(json.data as VMStatus);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Failed to fetch VM status:", err);
+    } finally {
+      if (isInitial) setLoading(false);
+      setCountdown(REFRESH_INTERVAL);
+    }
+  };
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch(
-          `/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${params.vm_id}/status`
-        );
-        const json = await res.json();
-        setData(json.data as VMStatus);
-        setLastUpdated(new Date());
-      } catch (err) {
-        console.error("Failed to fetch VM status:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
+    fetchStatus(true);
+    const interval = setInterval(() => fetchStatus(false), REFRESH_INTERVAL * 1000);
     return () => clearInterval(interval);
   }, [params.proxmox_id, params.node_name, params.vm_id]);
 
-  if (loading)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev <= 1 ? REFRESH_INTERVAL : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastUpdated]);
+
+  if (loading && !data)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <span className="loading loading-spinner loading-lg text-primary" />
-      </div>
+        <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-72 pt-16">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] opacity-40 animate-pulse">Syncing VM Data...</p>
+        </div>
     );
 
   if (!data)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="alert alert-error max-w-sm shadow-none">
-          <span>VM data tidak ditemukan.</span>
+        <div className="min-h-screen flex items-center justify-center bg-base-200 pt-20 lg:pl-72">
+             <div className="alert alert-error bg-error/10 border-error/20 text-error rounded-3xl shadow-sm max-w-lg">
+                <AlertTriangle size={24} />
+                <div>
+                  <h3 className="font-black tracking-tight text-lg">Not Found</h3>
+                  <p className="text-xs font-medium opacity-80">Data Virtual Machine tidak ditemukan atau Anda tidak memiliki akses.</p>
+                </div>
+            </div>
         </div>
-      </div>
     );
 
   const isRunning = data.status === "running";
 
   return (
-    <div className="min-h-screen bg-base-200 text-base-content pt-20 lg:pl-64 p-6 space-y-4">
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all cursor-default pb-20">
+      <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8">
 
-      {/* ── Refresh indicator ── */}
-      <div className="flex items-center justify-between text-xs text-base-content/40 px-1">
-        <span className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-base-content/30 animate-pulse" />
-          Auto-refresh setiap 5 detik
-        </span>
-        {lastUpdated && (
-          <span className="font-mono">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-
-      {/* ── Header ── */}
-      <div className="card bg-base-100 border border-base-200 shadow-none">
-        <div className="card-body p-5 flex-row flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${isRunning ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
-              <Monitor size={26} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-base-content">
-                {data.name}
-                <span className="text-base-content/40 font-mono text-sm font-normal ml-2">({data.vmid})</span>
-              </h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`inline-block h-2 w-2 rounded-full ${isRunning ? "bg-success animate-pulse" : "bg-error"}`} />
-                <span className={`badge badge-sm ${isRunning ? "badge-success" : "badge-error"}`}>
-                  {data.status}
-                </span>
-                <span className="text-base-content/20">|</span>
-                <span className="text-xs text-base-content/40">{data.cpus} vCPU · {formatBytes(data.maxmem)} RAM</span>
-                {isRunning && data["running-machine"] && (
-                  <>
-                    <span className="text-base-content/20">|</span>
-                    <span className="text-xs font-mono text-base-content/40">{data["running-machine"]}</span>
-                  </>
-                )}
-              </div>
-            </div>
+        {/* ── Header ── */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-3">
+              <Link href={`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}`} className="btn btn-sm btn-ghost btn-circle bg-base-300/50">
+                  <ArrowLeft size={16} />
+              </Link>
+              <p className="text-[10px] font-black tracking-[0.35em] uppercase opacity-40 m-0 flex items-center gap-2">
+                  <span className="inline-block h-px w-6 bg-primary"></span>
+                  Virtual Machine
+              </p>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <button className="btn btn-sm btn-outline">Console</button>
-            {!isRunning && (
-              <button className="btn btn-sm btn-success gap-1">
-                <Play size={12} />
-                Start VM
-              </button>
-            )}
-            <button className="btn btn-sm btn-primary">Manage VM</button>
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
+            <div className="flex items-center gap-6">
+                <div className={`w-20 h-20 rounded-3xl border shadow-inner flex items-center justify-center shrink-0 ${isRunning ? 'bg-success/10 text-success border-success/20' : 'bg-base-200 text-base-content/30 border-base-300'}`}>
+                    <Monitor size={40} />
+                </div>
+                <div>
+                    <h1 className="text-5xl font-black tracking-tighter leading-none text-base-content flex items-center gap-4">
+                      {data.name}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                      <div className="badge bg-base-100 border-base-300 gap-1.5 font-black text-[10px] uppercase tracking-widest px-3 py-3 shadow-sm text-base-content/60">
+                         ID: {data.vmid}
+                      </div>
+                      <div className={`badge gap-2 font-black uppercase text-[10px] tracking-widest px-4 py-3 border-none flex items-center shadow-sm ${isRunning ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                         {isRunning && <span className="w-2 h-2 rounded-full bg-success animate-ping"></span>} 
+                         {isRunning ? 'RUNNING' : 'STOPPED'}
+                      </div>
+                      <div className="badge bg-base-200 border-base-300 gap-1.5 font-bold text-[9px] uppercase tracking-widest px-3 py-3">
+                         <Cpu size={12}/> {data.cpus} vCPU
+                      </div>
+                      <div className="badge bg-base-200 border-base-300 gap-1.5 font-bold text-[9px] uppercase tracking-widest px-3 py-3">
+                         <MemoryStick size={12}/> {formatBytes(data.maxmem)} RAM
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Top action buttons */}
+            <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-base-100 p-1.5 rounded-3xl border border-base-300 shadow-sm mr-2">
+                    <button className="btn btn-ghost hover:bg-base-200 btn-circle btn-sm text-base-content/40 hover:text-base-content">
+                        <Terminal size={14}/>
+                    </button>
+                    {!isRunning ? (
+                      <button className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
+                        <Play size={14} className="mr-1"/> Power On
+                      </button>
+                    ) : (
+                      <>
+                        <button className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
+                          <RotateCcw size={14}/> Reboot
+                        </button>
+                        <button className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                          <PowerOff size={14}/> Stop
+                        </button>
+                      </>
+                    )}
+                </div>
+                
+                {/* Refresh component */}
+                <div className="flex items-center gap-3 bg-base-100 p-1.5 rounded-3xl border border-base-300 shadow-sm hidden md:flex">
+                    <div className="flex items-center gap-3 px-3 border-r border-base-200">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[8px] font-black text-base-content/30 uppercase tracking-widest leading-none mb-0.5">Sync</span>
+                        <span className="text-xs font-black tracking-tighter text-primary leading-none">{countdown}s</span>
+                      </div>
+                      <div className="radial-progress text-primary transition-all duration-1000" style={{ "--value": ((countdown / REFRESH_INTERVAL) * 100).toFixed(0), "--size": "1.5rem", "--thickness": "3px" } as React.CSSProperties}></div>
+                    </div>
+                    <button onClick={() => { setLoading(true); fetchStatus(true); }} disabled={loading} className="btn btn-circle btn-ghost btn-sm text-base-content/60 hover:text-primary hover:bg-primary/10">
+                      <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                    </button>
+                </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Stopped banner ── */}
-      {!isRunning && <StoppedBanner />}
+        {/* ── Stopped banner ── */}
+        {!isRunning && <StoppedBanner />}
 
-      {/* ── Metric Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="CPU Usage"
-          value={isRunning ? `${(data.cpu * 100).toFixed(2)}%` : "— %"}
-          subValue={`${data.cpus} vCPU dialokasikan`}
-          icon={<Cpu size={12} />}
-          color="blue"
-          progress={isRunning ? data.cpu * 100 : 0}
-          disabled={!isRunning}
-        />
-        <MetricCard
-          title="Memory"
-          value={isRunning ? formatBytes(data.mem) : "0 Bytes"}
-          subValue={`dari ${formatBytes(data.maxmem)} total`}
-          icon={<MemoryStick size={12} />}
-          color="purple"
-          progress={isRunning ? (data.mem / data.maxmem) * 100 : 0}
-          disabled={!isRunning}
-        />
-        <MetricCard
-          title="Network I/O"
-          value={isRunning ? formatBytes(data.netin + data.netout) : "—"}
-          subValue={`In: ${formatBytes(data.netin)} | Out: ${formatBytes(data.netout)}`}
-          icon={<Activity size={12} />}
-          color="orange"
-          disabled={!isRunning}
-        />
-        <MetricCard
-          title="Uptime"
-          value={formatUptime(data.uptime)}
-          subValue={isRunning && data.pid ? `PID: ${data.pid}` : "VM tidak berjalan"}
-          icon={<Clock size={12} />}
-          color="emerald"
-          disabled={!isRunning}
-        />
-      </div>
+        {/* ── Metric Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <MetricCard
+            title="Computing Engine"
+            value={isRunning ? `${(data.cpu * 100).toFixed(1)}%` : "0%"}
+            subValue={`${data.cpus} vCPU Logic Cores`}
+            icon={<Cpu size={12} />}
+            color="blue"
+            progress={isRunning ? data.cpu * 100 : 0}
+            disabled={!isRunning}
+          />
+          <MetricCard
+            title="Memory Usage"
+            value={isRunning ? formatBytes(data.mem) : "0 B"}
+            subValue={`of ${formatBytes(data.maxmem)} Allocated`}
+            icon={<MemoryStick size={12} />}
+            color="purple"
+            progress={isRunning ? (data.mem / data.maxmem) * 100 : 0}
+            disabled={!isRunning}
+          />
+          <MetricCard
+            title="Network Traffic"
+            value={isRunning ? formatBytes(data.netin + data.netout) : "0 B"}
+            subValue={`In: ${formatBytes(data.netin)} / Out: ${formatBytes(data.netout)}`}
+            icon={<Activity size={12} />}
+            color="orange"
+            disabled={!isRunning}
+          />
+          <MetricCard
+            title="Virtual Uptime"
+            value={formatUptime(data.uptime)}
+            subValue={isRunning && data.pid ? `System PID: ${data.pid}` : "Machine Offline"}
+            icon={<Clock size={12} />}
+            color="emerald"
+            disabled={!isRunning}
+          />
+        </div>
 
-      {/* ── Bottom Row ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ── Bottom Row ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Disk */}
-        <div className="card bg-base-100 border border-base-200 shadow-none lg:col-span-2">
-          <div className="card-body p-5 gap-4">
-            <h2 className="card-title text-base flex items-center gap-2">
-              <HardDrive size={15} className="text-base-content/40" />
-              Disk statistics
+          {/* Disk Statistics */}
+          <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8 lg:col-span-2">
+            <h2 className="text-xs font-black uppercase tracking-widest opacity-40 mb-8 flex items-center gap-2">
+                <HardDrive size={14} /> Storage Drive Analytics
             </h2>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-xs text-base-content/50 mb-1 font-medium uppercase tracking-wide">Read throughput</p>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-semibold ${!isRunning ? "text-base-content/40" : ""}`}>
-                    {formatBytes(data.diskread)}
-                  </span>
-                  {isRunning && <ArrowDownCircle size={13} className="text-info" />}
+            <div className="grid grid-cols-2 gap-6 mb-8">
+                <div className="bg-base-200 rounded-3xl p-6 border border-base-300 shadow-inner">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Read Throughput</p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-info/10 text-info flex items-center justify-center">
+                           <ArrowDownCircle size={20}/>
+                        </div>
+                        <span className={`text-3xl font-black tracking-tighter ${!isRunning ? "opacity-30" : ""}`}>
+                            {formatBytes(data.diskread)}
+                        </span>
+                    </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-base-content/50 mb-1 font-medium uppercase tracking-wide">Write throughput</p>
-                <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-semibold ${!isRunning ? "text-base-content/40" : ""}`}>
-                    {formatBytes(data.diskwrite)}
-                  </span>
-                  {isRunning && <ArrowUpCircle size={13} className="text-warning" />}
+                <div className="bg-base-200 rounded-3xl p-6 border border-base-300 shadow-inner">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Write Throughput</p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+                           <ArrowUpCircle size={20}/>
+                        </div>
+                        <span className={`text-3xl font-black tracking-tighter ${!isRunning ? "opacity-30" : ""}`}>
+                            {formatBytes(data.diskwrite)}
+                        </span>
+                    </div>
                 </div>
-              </div>
             </div>
 
-            <div className="divider my-0 text-xs text-base-content/30 uppercase tracking-widest">
-              {isRunning ? "Device block stats" : "Konfigurasi disk"}
+            <div className="divider opacity-30 text-[9px] font-black uppercase tracking-widest">
+                {isRunning ? "Running Block Devices" : "Offline Storage Summary"}
             </div>
 
             {isRunning && data.blockstat && Object.keys(data.blockstat).length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="table table-sm">
-                  <thead>
+              <div className="overflow-x-auto mt-4">
+                <table className="table w-full">
+                  <thead className="bg-base-200/50 text-[10px] font-black uppercase tracking-widest opacity-50 border-b border-base-300">
                     <tr>
-                      <th>Device</th>
-                      <th>Read ops</th>
-                      <th>Write ops</th>
-                      <th>Highest offset</th>
+                      <th className="py-4 pl-6">Drive Mount</th>
+                      <th>Read Op/s</th>
+                      <th>Write Op/s</th>
+                      <th className="pr-6 text-right">Highest Offset</th>
                     </tr>
                   </thead>
-                  <tbody className="font-mono">
+                  <tbody className="text-xs font-bold">
                     {Object.entries(data.blockstat).map(([key, val]) => (
-                      <tr key={key}>
-                        <td className="font-bold text-primary">{key}</td>
+                      <tr key={key} className="border-b border-base-200 last:border-0 hover:bg-base-200/50 transition-colors">
+                        <td className="pl-6 py-4">
+                            <span className="font-mono text-primary bg-primary/10 px-2 py-1 rounded-md">{key}</span>
+                        </td>
                         <td>{val.rd_operations?.toLocaleString() ?? "—"}</td>
                         <td>{val.wr_operations?.toLocaleString() ?? "—"}</td>
-                        <td className="text-xs text-base-content/40">
+                        <td className="pr-6 text-right font-mono opacity-60">
                           {formatBytes(val.wr_highest_offset ?? 0)}
                         </td>
                       </tr>
@@ -383,80 +436,78 @@ export default function VMDetailPage({
                 </table>
               </div>
             ) : (
-              <div className="space-y-1">
-                {[
-                  ["Max disk", formatBytes(data.maxdisk)],
-                  ["Disk allocated", formatBytes(data.disk)],
-                  ["HA managed", data.ha.managed === 1 ? "yes" : "unmanaged"],
-                  ["QEMU agent", data.agent === 1 ? "enabled" : "disabled"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between items-center py-2 border-b border-base-200 last:border-0 text-sm">
-                    <span className="text-base-content/50">{k}</span>
-                    <span className={`font-mono font-medium ${k === "QEMU agent" && data.agent === 1 ? "text-success" : ""}`}>{v}</span>
+                <div className="space-y-3 mt-6">
+                  {/* Progress Allocated Disk */}
+                  <div className="space-y-2 mb-6">
+                      <div className="flex justify-between items-end mb-1">
+                          <span className="text-[11px] font-black uppercase tracking-widest opacity-60">Virtual Disk Quota</span>
+                          <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                              {formatBytes(data.disk)} / {formatBytes(data.maxdisk)}
+                          </span>
+                      </div>
+                      <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                          <div className={`h-full rounded-full bg-base-content/20`} style={{ width: `${Math.min((data.disk/data.maxdisk)*100, 100)}%` }}></div>
+                      </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-base-200 px-5 py-4 rounded-2xl flex justify-between items-center border border-base-300">
+                          <span className="text-[10px] font-black tracking-widest uppercase opacity-40">HA Managed</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${data.ha.managed === 1 ? 'bg-success/20 text-success' : 'bg-base-300 text-base-content/60'}`}>
+                             {data.ha.managed === 1 ? "Enabled" : "Unmanaged"}
+                          </span>
+                      </div>
+                      <div className="bg-base-200 px-5 py-4 rounded-2xl flex justify-between items-center border border-base-300">
+                          <span className="text-[10px] font-black tracking-widest uppercase opacity-40">QEMU Agent</span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${data.agent === 1 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
+                             {data.agent === 1 ? "Active" : "Disabled"}
+                          </span>
+                      </div>
+                  </div>
+                </div>
             )}
           </div>
-        </div>
 
-        {/* Capability / Config */}
-        <div className="card bg-base-100 border border-base-200 shadow-none">
-          <div className="card-body p-5 gap-4">
-            <h2 className="card-title text-base flex items-center gap-2">
-              <Settings size={15} className="text-base-content/40" />
-              {isRunning ? "Capability & tools" : "Konfigurasi VM"}
+          {/* Configuration & Capabilities */}
+          <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8 flex flex-col">
+            <h2 className="text-xs font-black uppercase tracking-widest opacity-40 mb-6 flex items-center gap-2">
+                <Settings size={14} /> Virtual Configuration
             </h2>
 
-            <div className="bg-base-200 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-base-content/50">VMID</span>
-                <kbd className="kbd kbd-sm font-mono">{data.vmid}</kbd>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-base-content/50">QMP status</span>
-                <div className={`badge badge-sm ${isRunning ? "badge-success" : "badge-error"}`}>
-                  {data.qmpstatus}
+            <div className="bg-base-200 rounded-2xl p-5 border border-base-300 space-y-3 mb-6 shadow-inner">
+                <div className="flex justify-between items-center py-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">QMP State</span>
+                    <span className={`badge border-none tracking-widest uppercase text-[9px] font-black px-2 ${isRunning ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                        {data.qmpstatus}
+                    </span>
                 </div>
-              </div>
-              {isRunning && data["running-qemu"] && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-base-content/50">QEMU version</span>
-                  <kbd className="kbd kbd-sm font-mono">{data["running-qemu"]}</kbd>
-                </div>
-              )}
+                {isRunning && data["running-qemu"] && (
+                    <div className="flex justify-between items-center py-1 border-t border-base-300/50 pt-2 text-right">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">QEMU Engine</span>
+                        <span className="text-[10px] font-mono font-bold bg-base-300 px-2 rounded-md">{data["running-qemu"]}</span>
+                    </div>
+                )}
+                {isRunning && data["running-machine"] && (
+                    <div className="flex justify-between items-center py-1 border-t border-base-300/50 pt-2 text-right">
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Machine Type</span>
+                        <span className="text-[10px] font-mono font-bold bg-base-300 px-2 rounded-md truncate max-w-[120px]">{data["running-machine"]}</span>
+                    </div>
+                )}
             </div>
 
-            {/* Resource summary */}
-            <div>
-              <p className="text-xs font-bold uppercase text-base-content/30 tracking-wider mb-2">
-                Resource allocation
-              </p>
-              {[
-                ["vCPU", `${data.cpus} cores`],
-                ["RAM max", formatBytes(data.maxmem)],
-                ["Storage max", formatBytes(data.maxdisk)],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between text-sm py-1.5 border-b border-base-200 last:border-0">
-                  <span className="text-base-content/50">{k}</span>
-                  <span className="font-mono">{v}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* PBS Support — hanya ditampilkan saat running */}
+            {/* PBS Support — hanya saat running */}
             {isRunning && data["proxmox-support"] && (
-              <div>
-                <p className="text-xs font-bold uppercase text-base-content/30 tracking-wider mb-2">
-                  Proxmox backup support
+              <div className="mb-6">
+                <p className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-3">
+                  Backup Capabilities
                 </p>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {Object.entries(data["proxmox-support"])
                     .filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean")
                     .map(([key, val]) => (
-                      <div key={key} className="flex items-center gap-2 text-[10px] font-medium text-base-content/60 bg-base-200 px-2 py-1.5 rounded-lg border border-base-300">
-                        <Zap size={10} className={val ? "text-warning" : "text-base-content/20"} />
-                        <span className="truncate">{key.replace("pbs-", "")}</span>
+                      <div key={key} className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest bg-base-200 px-2.5 py-1.5 rounded-lg border border-base-300 transition-colors ${val ? "text-base-content hover:border-warning/50" : "opacity-40"}`}>
+                        <Zap size={10} className={val ? "text-warning" : "opacity-30"} />
+                        {key.replace("pbs-", "")}
                       </div>
                     ))}
                 </div>
@@ -465,30 +516,33 @@ export default function VMDetailPage({
 
             {/* Balloon memory — hanya saat running */}
             {isRunning && data.freemem !== undefined && (
-              <div className="pt-2 border-t border-base-200">
-                <p className="text-xs font-bold uppercase text-base-content/30 tracking-wider mb-2">
-                  Balloon memory
-                </p>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-base-content/50">Free in VM</span>
-                  <span className="font-mono font-medium">{formatBytes(data.freemem)}</span>
+              <div className="mt-auto">
+                <div className="space-y-2 pt-6 border-t border-base-200">
+                    <div className="flex justify-between items-end mb-1">
+                        <div className="flex gap-2 items-center">
+                            <span className="text-[11px] font-black uppercase tracking-widest opacity-60">Balloon RAM</span>
+                        </div>
+                        <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                            {formatBytes(data.freemem)} Free
+                        </span>
+                    </div>
+                    <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                        <div className={`h-full rounded-full transition-all duration-1000 bg-secondary`} style={{ width: `${(data.freemem / data.maxmem) * 100}%` }}></div>
+                    </div>
                 </div>
-                <progress
-                  className="progress progress-secondary h-1.5 w-full"
-                  value={(data.freemem / data.maxmem) * 100}
-                  max={100}
-                />
               </div>
             )}
 
-            {/* CTA saat stopped */}
+            {/* Call to action ketika mati */}
             {!isRunning && (
-              <div className="bg-success/5 border border-success/20 rounded-xl p-3 flex items-center gap-3">
-                <Play size={14} className="text-success flex-shrink-0" />
-                <p className="text-xs text-success/80">
-                  Klik <span className="font-semibold">Start VM</span> untuk menghidupkan virtual machine ini.
-                </p>
-              </div>
+               <div className="bg-success/5 border border-success/20 rounded-2xl p-4 flex gap-3 items-center mt-auto shadow-sm">
+                   <div className="bg-success/10 p-2 rounded-xl text-success shrink-0">
+                      <Play size={16}/>
+                   </div>
+                   <p className="text-xs font-medium text-success/90 leading-snug">
+                     Virtual Machine dalam kondisi mati. Silakan tekan tombol <b>Power On</b> untuk mengaktifkannya kembali.
+                   </p>
+               </div>
             )}
           </div>
         </div>

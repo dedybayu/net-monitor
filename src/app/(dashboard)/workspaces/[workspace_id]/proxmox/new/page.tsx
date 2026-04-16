@@ -46,7 +46,7 @@ export default function AddProxmoxPage() {
     };
 
     return (
-        <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-64 pt-16">
+        <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-16">
             <div className="p-6 md:p-10 max-w-6xl mx-auto">
                 {/* ── PAGE HEADER ── */}
                 <div className="mb-10">

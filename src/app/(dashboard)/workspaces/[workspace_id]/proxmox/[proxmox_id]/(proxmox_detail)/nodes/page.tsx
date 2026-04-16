@@ -58,7 +58,7 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
 
     if (loading) {
         return (
-            <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-64 pt-16">
+            <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-72 pt-16">
                 <span className="loading loading-spinner loading-lg text-primary"></span>
                 <p className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] opacity-40 animate-pulse">Syncing Nodes...</p>
             </div>
@@ -66,7 +66,7 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
     }
 
     return (
-        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-64 pt-10 transition-all">
+        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all">
             <div className="p-6 md:p-10 max-w-xxl mx-auto">
                 {/* ── HEADER HALAMAN ── */}
                 <div className="mb-10">
@@ -114,8 +114,8 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
                         const cpuUsage = cpu * 100;
 
                         const statusClasses = isOnline
-                            ? "bg-base-100 border-base-300 hover:border-success/40 hover:shadow-xl hover:shadow-success/5 hover:-translate-y-1"
-                            : "bg-base-100 border-base-300 opacity-80 hover:border-error/40";
+                            ? "bg-base-100 border-transparent shadow-md hover:border-success/40 hover:shadow-xl hover:shadow-success/10 hover:-translate-y-1"
+                            : "bg-base-100 border-transparent shadow-sm opacity-80 hover:border-error/40";
 
                         return (
                             <Link

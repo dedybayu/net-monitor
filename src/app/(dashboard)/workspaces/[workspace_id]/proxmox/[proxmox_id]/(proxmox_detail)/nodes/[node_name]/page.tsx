@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Monitor, Box, ArrowUp, ArrowDown } from "lucide-react";
+import { Monitor, Box, ArrowUp, ArrowDown, ArrowLeft, RefreshCw, Server, Cpu, HardDrive, LayoutTemplate, Activity, AlertTriangle, Terminal, Info, Clock, CheckCircle2 } from "lucide-react";
 
 interface NodeStatus {
   uptime: number;
@@ -77,56 +77,6 @@ function usagePct(used: number, total: number) {
   return Math.min(100, (used / total) * 100);
 }
 
-function cpuProgressColor(pct: number) {
-  if (pct > 80) return "progress-error";
-  if (pct > 50) return "progress-warning";
-  return "progress-success";
-}
-
-function memProgressColor(pct: number) {
-  if (pct > 85) return "progress-error";
-  if (pct > 65) return "progress-warning";
-  return "progress-info";
-}
-
-function diskProgressColor(pct: number) {
-  if (pct > 90) return "progress-error";
-  if (pct > 70) return "progress-warning";
-  return "progress-accent";
-}
-
-function RadialGauge({
-  value,
-  label,
-  colorClass,
-}: {
-  value: number;
-  label: string;
-  colorClass: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div
-        className={`radial-progress ${colorClass} font-mono font-bold transition-all duration-500`}
-        style={
-          {
-            "--value": value.toFixed(1),
-            "--size": "5.5rem",
-            "--thickness": "7px",
-          } as React.CSSProperties
-        }
-        role="progressbar"
-        aria-valuenow={value}
-      >
-        <span className="text-sm font-bold">{value.toFixed(1)}%</span>
-      </div>
-      <span className="text-[10px] font-mono text-base-content/40 tracking-widest uppercase">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 const REFRESH_INTERVAL = 5;
 
 export default function NodeDetailPage() {
@@ -175,14 +125,12 @@ export default function NodeDetailPage() {
     }
   }, [params.proxmox_id, params.node_name]);
 
-  // Auto-refresh every 5s
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, REFRESH_INTERVAL * 1000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => (prev <= 1 ? REFRESH_INTERVAL : prev - 1));
@@ -211,716 +159,491 @@ export default function NodeDetailPage() {
   const sortedCts = useMemo(() => getSortedItems(cts), [cts, getSortedItems]);
 
   return (
-    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-20 lg:pl-64">
-
-      {/* ─── Header ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="breadcrumbs text-xs mb-1 text-base-content/40 font-mono">
-            <ul>
-              <li>Proxmox</li>
-              <li>{params.proxmox_id}</li>
-              <li className="text-base-content font-semibold">{params.node_name}</li>
-            </ul>
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all cursor-default pb-20">
+      <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8">
+        
+        {/* ─── HEADER ─── */}
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+              <Link href={`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes`} className="btn btn-sm btn-ghost btn-circle bg-base-300/50">
+                  <ArrowLeft size={16} />
+              </Link>
+              <p className="text-[10px] font-black tracking-[0.35em] uppercase opacity-40 m-0 flex items-center gap-2">
+                  <span className="inline-block h-px w-6 bg-primary"></span>
+                  Physical Node Details
+              </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold font-mono tracking-tight">
-              {params.node_name}
-            </h1>
-            {!loading && !error && (
-              <div className="badge badge-success gap-1.5">
-                <span className="loading loading-ring loading-xs" />
-                online
+
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
+            <div>
+                <h1 className="text-5xl font-black tracking-tighter leading-none text-base-content mb-2 flex items-center gap-4">
+                  Target <span className="text-primary">{params.node_name}</span>
+                </h1>
+                <div className="flex flex-wrap items-center gap-3 mt-4">
+                  {loading && !data ? (
+                    <div className="loading loading-dots loading-sm opacity-50"></div>
+                  ) : error ? (
+                    <div className="badge badge-error gap-1.5 font-bold uppercase text-[10px] tracking-widest px-3 py-3 border-none animate-pulse">
+                      <AlertTriangle size={12} /> Unreachable
+                    </div>
+                  ) : (
+                    <div className="badge bg-success/15 text-success gap-2 font-black uppercase text-[10px] tracking-widest px-4 py-3 border-none flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-success animate-ping"></span> Live Online
+                    </div>
+                  )}
+                  {data && (
+                    <div className="badge bg-base-100 border-base-300 gap-1.5 font-bold text-[10px] uppercase tracking-widest py-3 shadow-sm text-base-content/60">
+                      <Server size={12} /> {data.pveversion}
+                    </div>
+                  )}
+                </div>
+            </div>
+
+            {/* Refresh Widget Premium */}
+            <div className="flex items-center gap-3 bg-base-100 p-2 rounded-3xl border border-base-300 shadow-sm">
+                <div className="flex items-center gap-4 px-4 border-r border-base-200">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[9px] font-black text-base-content/30 uppercase tracking-widest">
+                      Refresh In
+                    </span>
+                    <span className="text-sm font-black tracking-tighter text-primary">
+                      {countdown}s
+                    </span>
+                  </div>
+                  <div
+                    className="radial-progress text-primary transition-all duration-1000"
+                    style={{
+                      "--value": ((countdown / REFRESH_INTERVAL) * 100).toFixed(0),
+                      "--size": "2rem",
+                      "--thickness": "4px",
+                    } as React.CSSProperties}
+                  >
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setLoading(true); fetchData(); }}
+                  disabled={loading}
+                  className="btn btn-circle btn-ghost text-base-content/60 hover:text-primary hover:bg-primary/10"
+                >
+                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                </button>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+            <div className="alert alert-error bg-error/10 border-error/20 text-error rounded-3xl shadow-sm">
+                <AlertTriangle size={24} />
+                <div>
+                  <h3 className="font-black tracking-tight text-lg">Connection Failure</h3>
+                  <p className="text-xs font-medium opacity-80">{error}</p>
+                </div>
+                <button onClick={fetchData} className="btn btn-sm btn-error shadow-sm">Retry Request</button>
+            </div>
+        )}
+
+        {/* ─── Skeleton ─── */}
+        {loading && !data && (
+            <div className="space-y-8 animate-pulse">
+              <div className="h-16 bg-base-300/50 rounded-2xl w-full max-w-lg mb-6"></div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="h-64 bg-base-300/50 rounded-[2rem]"></div>
+                <div className="h-64 bg-base-300/50 rounded-[2rem] lg:col-span-2"></div>
+              </div>
+            </div>
+        )}
+
+        {/* ─── Dashboard content ─── */}
+        {data && (
+          <div className="space-y-8">
+
+            {/* Premium Tab Controller */}
+            <div className="flex gap-2 bg-base-100 p-2 rounded-2xl border border-base-300 w-full overflow-x-auto shadow-sm">
+                {(
+                  [
+                    { id: "spec", label: "Spesifikasi Node", icon: <Info size={14} />, badge: null },
+                    { id: "vm", label: "Virtual Guests", icon: <Monitor size={14} />, badge: vms.length },
+                    { id: "ct", label: "LXC Containers", icon: <Box size={14} />, badge: cts.length }
+                  ] as { id: typeof activeTab, label: string, icon: any, badge: number | null }[]
+                ).map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`
+                            flex-1 flex items-center justify-center gap-3 px-6 py-4 text-xs font-black uppercase
+                            tracking-widest rounded-xl whitespace-nowrap transition-all duration-300
+                            ${activeTab === tab.id
+                                ? 'bg-primary text-primary-content shadow-lg shadow-primary/20'
+                                : 'text-base-content/50 hover:text-base-content hover:bg-base-200/50'}
+                        `}
+                    >
+                        <span className={activeTab === tab.id ? 'opacity-100' : 'opacity-50'}>{tab.icon}</span>
+                        {tab.label}
+                        {tab.badge !== null && (
+                            <span className={`
+                                text-[10px] font-black px-2 py-0.5 rounded-full ml-1
+                                ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-base-300 text-base-content/50'}
+                            `}>
+                                {tab.badge}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* TAB: SPESIFIKASI */}
+            {activeTab === "spec" && (
+              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+
+                {/* Quick stat cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(
+                    [
+                      {
+                        label: "System Uptime",
+                        value: formatUptime(data.uptime),
+                        color: "primary",
+                        icon: <Clock size={20} />
+                      },
+                      {
+                        label: "CPU Threads",
+                        value: `${data.cpuinfo.cores}C / ${data.cpuinfo.cpus}T`,
+                        color: "info",
+                        icon: <Cpu size={20} />
+                      },
+                      {
+                        label: "Boot Architecture",
+                        value: data["boot-info"].mode.toUpperCase(),
+                        color: "warning",
+                        icon: <Terminal size={20} />
+                      },
+                      {
+                        label: "Virtualization (HVM)",
+                        value: data.cpuinfo.hvm === "1" ? "Enabled" : "Disabled",
+                        color: data.cpuinfo.hvm === "1" ? "success" : "error",
+                        icon: <CheckCircle2 size={20} />
+                      },
+                    ] as const
+                  ).map((stat) => (
+                    <div key={stat.label} className="bg-base-100 border border-base-300 rounded-[2rem] p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all group overflow-hidden relative">
+                      <div className={`absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity text-${stat.color}`}>
+                          {stat.icon}
+                      </div>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-${stat.color}/10 text-${stat.color} shadow-inner`}>
+                          {stat.icon}
+                      </div>
+                      <p className="text-[9px] font-black text-base-content/40 uppercase tracking-widest mb-1">
+                        {stat.label}
+                      </p>
+                      <p className="font-black text-xl tracking-tighter leading-none">{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Radial gauges Card */}
+                  <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8">
+                    <h2 className="text-xs font-black uppercase tracking-widest opacity-40 mb-8 flex items-center gap-2">
+                        <Activity size={14} /> Resource Load
+                    </h2>
+                    <div className="flex justify-around items-center mb-8">
+                        {/* Custom Radial Implementation without relying purely on daisyUI helper if it's too simple */}
+                        {[
+                            { val: cpuPct, label: 'CPU', color: cpuPct > 80 ? 'text-error' : 'text-primary' },
+                            { val: memPct, label: 'Memory', color: memPct > 85 ? 'text-error' : 'text-info' },
+                            { val: diskPct, label: 'Disk', color: diskPct > 90 ? 'text-error' : 'text-secondary' },
+                        ].map(g => (
+                            <div key={g.label} className="flex flex-col items-center gap-3">
+                                <div className={`radial-progress ${g.color} transition-all duration-1000`} 
+                                     style={{ "--value": g.val, "--size": "5rem", "--thickness": "6px" } as React.CSSProperties}>
+                                    <span className="font-black text-sm">{g.val.toFixed(0)}%</span>
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest opacity-50">{g.label}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="divider opacity-30"></div>
+                    <div className="text-center mt-6">
+                        <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-3">Load Average</p>
+                        <div className="flex justify-center gap-6">
+                          {data.loadavg.map((la, i) => (
+                              <div key={i} className="bg-base-200 px-4 py-2 rounded-xl border border-base-300 text-center shadow-inner">
+                                  <p className="font-black text-base tracking-tighter">{la}</p>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest opacity-40 mt-0.5">{["1M", "5M", "15M"][i]}</p>
+                              </div>
+                          ))}
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bars Card */}
+                  <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8 lg:col-span-2">
+                    <h2 className="text-xs font-black uppercase tracking-widest opacity-40 mb-8 flex items-center gap-2">
+                        <Server size={14} /> Detailed Hardware Metrics
+                    </h2>
+
+                    <div className="space-y-8">
+                        {/* CPU */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-end mb-1">
+                                <div className="flex gap-3 items-center">
+                                    <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex justify-center items-center">
+                                        <Cpu size={16}/>
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase tracking-widest opacity-60">CPU Computing</span>
+                                </div>
+                                <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                                    {cpuPct.toFixed(1)}% Usage &middot; {parseFloat(data.cpuinfo.mhz).toFixed(0)} MHz
+                                </span>
+                            </div>
+                            <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${cpuPct > 80 ? 'bg-error' : 'bg-primary'}`} style={{ width: `${cpuPct}%` }}></div>
+                            </div>
+                            <p className="text-[10px] opacity-40 font-mono italic tracking-tight">{data.cpuinfo.model}</p>
+                        </div>
+
+                        {/* Memory */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-end mb-1">
+                                <div className="flex gap-3 items-center">
+                                    <div className="w-8 h-8 rounded-xl bg-info/10 text-info flex justify-center items-center">
+                                        <LayoutTemplate size={16}/>
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase tracking-widest opacity-60">RAM Allocation</span>
+                                </div>
+                                <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                                    {formatBytes(data.memory.used)} / {formatBytes(data.memory.total)}
+                                </span>
+                            </div>
+                            <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${memPct > 85 ? 'bg-error' : 'bg-info'}`} style={{ width: `${memPct}%` }}></div>
+                            </div>
+                        </div>
+
+                        {/* Root FS */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-end mb-1">
+                                <div className="flex gap-3 items-center">
+                                    <div className="w-8 h-8 rounded-xl bg-secondary/10 text-secondary flex justify-center items-center">
+                                        <HardDrive size={16}/>
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase tracking-widest opacity-60">Root Filesystem</span>
+                                </div>
+                                <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                                    {formatBytes(data.rootfs.used)} / {formatBytes(data.rootfs.total)} ({formatBytes(data.rootfs.avail)} Avail)
+                                </span>
+                            </div>
+                            <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${diskPct > 90 ? 'bg-error' : 'bg-secondary'}`} style={{ width: `${diskPct}%` }}></div>
+                            </div>
+                        </div>
+                        
+                        {/* Swap */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-end mb-1">
+                                <div className="flex gap-3 items-center">
+                                    <div className="w-8 h-8 rounded-xl bg-accent/10 text-accent flex justify-center items-center">
+                                        <ArrowUp size={16}/>
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase tracking-widest opacity-60">Swap Memory</span>
+                                </div>
+                                <span className="text-[10px] font-bold opacity-80 bg-base-200 px-2 py-1 rounded-lg">
+                                    {formatBytes(data.swap.used)} / {formatBytes(data.swap.total)}
+                                </span>
+                            </div>
+                            <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300/50">
+                                <div className={`h-full rounded-full transition-all duration-1000 bg-accent`} style={{ width: `${Math.max(swapPct, 0)}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* System info & CPU Flags */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    {/* System Information */}
+                    <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8">
+                        <h2 className="text-xs font-black uppercase tracking-widest opacity-40 mb-6 flex items-center gap-2">
+                            <Terminal size={14} /> System Information
+                        </h2>
+                        <div className="space-y-3">
+                            {(
+                                [
+                                ["PVE Version", data.pveversion],
+                                ["Kernel Release", data["current-kernel"].release],
+                                ["Arch OS", `${data["current-kernel"].sysname} ${data["current-kernel"].machine}`],
+                                ["CPU Model", data.cpuinfo.model],
+                                ["KSM Shared", formatBytes(data.ksm.shared)],
+                                ] as [string, string][]
+                            ).map(([k, v]) => (
+                                <div key={k} className="flex justify-between items-center py-3 border-b border-base-200 last:border-0">
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-50">{k}</span>
+                                    <span className="text-[11px] font-mono bg-base-200 px-3 py-1.5 rounded-lg border border-base-300 font-bold max-w-[200px] truncate">{v}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* CPU Flags */}
+                    <div className="bg-base-100 border border-base-300 rounded-[2rem] shadow-sm p-8">
+                        <div className="flex items-center justify-between gap-2 mb-6">
+                            <h2 className="text-xs font-black uppercase tracking-widest opacity-40 flex items-center gap-2">
+                                <Cpu size={14} /> CPU Flags Config
+                            </h2>
+                            <div className="bg-base-200 text-xs font-black px-3 py-1 rounded-xl">
+                                {data.cpuinfo.flags.split(" ").length} Flags
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 max-h-56 pr-2 overflow-y-auto scrollbar-thin scrollbar-thumb-base-300">
+                            {data.cpuinfo.flags.split(" ").map((flag) => (
+                                <span key={flag} className="px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-widest bg-base-200 border border-base-300 rounded-md opacity-70 hover:opacity-100 hover:text-primary transition-colors cursor-default">
+                                    {flag}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
               </div>
             )}
-            {error && <div className="badge badge-error">unreachable</div>}
-          </div>
-          {data && (
-            <p className="text-sm text-base-content/40 font-mono mt-1">
-              {data.pveversion}&ensp;·&ensp;up {formatUptime(data.uptime)}
-            </p>
-          )}
-        </div>
 
-        {/* Refresh widget */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-3 bg-base-100 border border-base-300 rounded-xl px-3 py-2">
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] font-mono text-base-content/30 uppercase tracking-wide">
-                next refresh
-              </span>
-              <span className="text-xs font-mono font-bold text-primary">
-                {countdown}s
-              </span>
-            </div>
-            <div
-              className="radial-progress text-primary"
-              style={
-                {
-                  "--value": ((countdown / REFRESH_INTERVAL) * 100).toFixed(0),
-                  "--size": "2.2rem",
-                  "--thickness": "3px",
-                } as React.CSSProperties
-              }
-            >
-              <span className="text-[9px] font-mono">{countdown}</span>
-            </div>
+            {/* TAB: VIRTUAL GUESTS */}
+            {(activeTab === "vm" || activeTab === "ct") && (
+              <div className="animate-in fade-in zoom-in-95 duration-300">
+                
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 text-primary p-2 rounded-xl">
+                            {activeTab === "vm" ? <Monitor size={20} /> : <Box size={20} />}
+                        </div>
+                        <h2 className="text-xl font-black tracking-tighter leading-none">
+                            {activeTab === "vm" ? `Virtual Machines (${vms.length})` : `LXC Containers (${cts.length})`}
+                        </h2>
+                    </div>
+                    {((activeTab === "vm" ? vms : cts).length > 0) && (
+                        <div className="flex items-center gap-3 bg-base-100 p-1 rounded-xl border border-base-300 shadow-sm">
+                            <select
+                                className="select select-sm select-ghost font-bold text-[10px] uppercase tracking-widest focus:bg-transparent"
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as "id" | "name")}
+                            >
+                                <option value="id">Sort ID</option>
+                                <option value="name">Sort Name</option>
+                            </select>
+                            <button
+                                className="btn btn-square btn-sm btn-ghost hover:bg-base-200"
+                                onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                            >
+                                {sortOrder === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {((activeTab === "vm" ? sortedVms : sortedCts).length > 0) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {(activeTab === "vm" ? sortedVms : sortedCts).map((machine) => {
+                            const isRunning = machine.status === 'running';
+                            const memUsage = ((machine.mem ?? 0) / (machine.maxmem ?? 1)) * 100;
+                            const cpuUsage = (machine.cpu ?? 0) * 100;
+
+                            return (
+                                <div 
+                                    key={machine.vmid}
+                                    onClick={() => router.push(`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}/${activeTab === "vm" ? "vm" : "ct"}/${machine.vmid}`)}
+                                    className={`relative overflow-hidden bg-base-100 border rounded-[2rem] p-6 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-xl ${
+                                        isRunning ? 'border-base-300 hover:border-primary/40 hover:shadow-primary/5' : 'border-base-300 opacity-80 hover:border-error/40'
+                                    }`}
+                                >
+                                    {isRunning && (
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success/0 via-success/50 to-success/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    )}
+
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="flex gap-4">
+                                            <div className={`p-3 rounded-2xl border transition-colors shadow-inner flex items-center justify-center ${
+                                                 isRunning ? 'bg-success/10 text-success border-success/20' : 'bg-base-200 text-base-content/30 border-base-300'
+                                            }`}>
+                                                {activeTab === "vm" ? <Monitor size={22} /> : <Box size={22} />}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[9px] font-black bg-base-200 border border-base-300 px-2 py-0.5 rounded-md opacity-60 uppercase tracking-widest">
+                                                        ID: {machine.vmid}
+                                                    </span>
+                                                    {isRunning && <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>}
+                                                </div>
+                                                <h3 className="font-black text-lg truncate w-32 md:w-36 uppercase tracking-tight leading-none group-hover:text-primary transition-colors">
+                                                    {machine.name || 'Unnamed'}
+                                                </h3>
+                                            </div>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${
+                                                isRunning ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                                            }`}>
+                                                {machine.status}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className={`space-y-4 mb-6 transition-opacity ${!isRunning && 'opacity-40 mix-blend-luminosity'}`}>
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                                <span className="flex items-center gap-1"><Cpu size={12}/> CPU Load</span>
+                                                <span>{isRunning ? `${cpuUsage.toFixed(1)}%` : '0%'}</span>
+                                            </div>
+                                            <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden border border-base-300/50">
+                                                <div className={`h-full rounded-full transition-all duration-1000 ${cpuUsage > 80 ? 'bg-error' : 'bg-primary'}`} style={{ width: `${isRunning ? cpuUsage : 0}%` }}></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
+                                                <span className="flex items-center gap-1"><LayoutTemplate size={12}/> Memory</span>
+                                                <span>{isRunning ? `${formatBytes(machine.mem ?? 0)} / ${formatBytes(machine.maxmem ?? 0)}` : '-'}</span>
+                                            </div>
+                                            <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden border border-base-300/50">
+                                                <div className={`h-full rounded-full transition-all duration-1000 ${memUsage > 85 ? 'bg-error' : 'bg-info'}`} style={{ width: `${isRunning ? memUsage : 0}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center pt-5 border-t border-base-200">
+                                        <div className="text-[9px] font-bold opacity-40 uppercase tracking-widest">
+                                            {isRunning ? `UP: ${formatUptime(machine.uptime ?? 0)}` : 'Offline'}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button className="btn btn-ghost bg-base-200/50 rounded-xl font-black uppercase tracking-widest text-[9px] px-3 border-none shadow-sm h-8 min-h-8" onClick={(e) => { e.stopPropagation(); }}>
+                                                Console
+                                            </button>
+                                            <button className={`btn rounded-xl font-black uppercase tracking-widest text-[9px] px-4 shadow-sm h-8 min-h-8 border-none ${
+                                                isRunning ? 'bg-error/10 text-error hover:bg-error hover:text-white' : 'bg-success text-white hover:bg-success/90'
+                                            }`} onClick={(e) => { e.stopPropagation(); }}>
+                                                {isRunning ? 'Stop' : 'Start'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-24 bg-base-100/50 rounded-[3rem] border-2 border-dashed border-base-300 opacity-60">
+                        <div className="bg-base-200 p-6 rounded-full mb-6 text-primary/40">
+                            {activeTab === "vm" ? <Monitor size={48} /> : <Box size={48} />}
+                        </div>
+                        <h3 className="font-black text-2xl tracking-tight uppercase opacity-40 mb-2">Empty Area</h3>
+                        <p className="text-xs font-bold uppercase tracking-widest opacity-50">No {activeTab === "vm" ? 'Virtual Machines' : 'Containers'} deployed on this node.</p>
+                    </div>
+                )}
+              </div>
+            )}
+            
           </div>
-          <button
-            onClick={() => { setLoading(true); fetchData(); }}
-            disabled={loading}
-            className="btn btn-sm btn-square btn-ghost border border-base-300"
-            title="Refresh now"
-          >
-            <svg
-              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
+        )}
       </div>
-
-      {/* ─── Error alert ─── */}
-      {error && (
-        <div role="alert" className="alert alert-error mb-5">
-          <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="font-mono text-sm">{error}</span>
-          <button onClick={fetchData} className="btn btn-sm btn-ghost">Retry</button>
-        </div>
-      )}
-
-      {/* ─── Skeleton loader ─── */}
-      {loading && !data && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="skeleton h-56 rounded-2xl" />
-            <div className="skeleton h-56 rounded-2xl lg:col-span-2" />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="skeleton h-28 rounded-2xl" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="skeleton h-64 rounded-2xl" />
-            <div className="skeleton h-64 rounded-2xl" />
-          </div>
-        </div>
-      )}
-
-      {/* ─── Dashboard content ─── */}
-      {data && (
-        <div className="space-y-4">
-
-          {/* Tabs Navigation */}
-          <div className="tabs tabs-boxed bg-base-100 border border-base-300 w-fit">
-            <button
-              onClick={() => setActiveTab("spec")}
-              className={`tab font-mono text-xs font-semibold ${activeTab === "spec" ? "tab-active" : ""}`}
-            >
-              Spesifikasi
-            </button>
-            <button
-              onClick={() => setActiveTab("vm")}
-              className={`tab font-mono text-xs font-semibold ${activeTab === "vm" ? "tab-active" : ""}`}
-            >
-              Virtual Machines
-            </button>
-            <button
-              onClick={() => setActiveTab("ct")}
-              className={`tab font-mono text-xs font-semibold ${activeTab === "ct" ? "tab-active" : ""}`}
-            >
-              LXC Containers
-            </button>
-          </div>
-
-          {activeTab === "spec" && (
-            <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-
-          {/* Row 1: Gauges + Detailed metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-            {/* Radial gauges */}
-            <div className="card bg-base-100 border border-base-300 shadow-sm">
-              <div className="card-body p-6">
-                <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold mb-4">
-                  Resource Usage
-                </h2>
-                <div className="flex justify-around items-center">
-                  <RadialGauge
-                    value={cpuPct}
-                    label="CPU"
-                    colorClass={cpuPct > 80 ? "text-error" : cpuPct > 50 ? "text-warning" : "text-success"}
-                  />
-                  <RadialGauge
-                    value={memPct}
-                    label="Memory"
-                    colorClass={memPct > 85 ? "text-error" : memPct > 65 ? "text-warning" : "text-info"}
-                  />
-                  <RadialGauge
-                    value={diskPct}
-                    label="Disk"
-                    colorClass={diskPct > 90 ? "text-error" : diskPct > 70 ? "text-warning" : "text-accent"}
-                  />
-                </div>
-
-                <div className="divider my-3 text-[10px] font-mono text-base-content/30 uppercase tracking-widest">
-                  Load Average
-                </div>
-
-                <div className="flex justify-around">
-                  {data.loadavg.map((la, i) => (
-                    <div key={i} className="text-center">
-                      <p className="font-mono font-bold text-lg">{la}</p>
-                      <p className="text-[10px] text-base-content/40 font-mono uppercase">
-                        {["1 min", "5 min", "15 min"][i]}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Progress bars */}
-            <div className="card bg-base-100 border border-base-300 shadow-sm lg:col-span-2">
-              <div className="card-body p-6 gap-5">
-                <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
-                  Detailed Metrics
-                </h2>
-
-                {/* CPU */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-success/15 text-success flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-semibold">CPU</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-ghost badge-sm font-mono">
-                        {data.cpuinfo.cores}c / {data.cpuinfo.cpus}t
-                      </span>
-                      <span className="font-mono text-sm font-bold">
-                        {cpuPct.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                  <progress
-                    className={`progress ${cpuProgressColor(cpuPct)} w-full h-2.5 transition-all duration-500`}
-                    value={cpuPct} max={100}
-                  />
-                  <p className="text-[11px] text-base-content/30 font-mono truncate">
-                    {data.cpuinfo.model} &middot; {parseFloat(data.cpuinfo.mhz).toFixed(0)} MHz
-                  </p>
-                </div>
-
-                {/* Memory */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-info/15 text-info flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M9 3H5a2 2 0 00-2 2v4m4-6h6m0 0h4a2 2 0 012 2v4M9 3v4m6-4v4M3 9h18M3 9v10a2 2 0 002 2h14a2 2 0 002-2V9" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-semibold">Memory</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-ghost badge-sm font-mono">
-                        {formatBytes(data.memory.free)} free
-                      </span>
-                      <span className="font-mono text-sm font-bold">
-                        {formatBytes(data.memory.used)} / {formatBytes(data.memory.total)}
-                      </span>
-                    </div>
-                  </div>
-                  <progress
-                    className={`progress ${memProgressColor(memPct)} w-full h-2.5 transition-all duration-500`}
-                    value={memPct} max={100}
-                  />
-                  <p className="text-[11px] text-base-content/30 font-mono">
-                    {memPct.toFixed(1)}% used
-                  </p>
-                </div>
-
-                {/* Root FS */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-semibold">Root FS</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-ghost badge-sm font-mono">
-                        {formatBytes(data.rootfs.avail)} avail
-                      </span>
-                      <span className="font-mono text-sm font-bold">
-                        {formatBytes(data.rootfs.used)} / {formatBytes(data.rootfs.total)}
-                      </span>
-                    </div>
-                  </div>
-                  <progress
-                    className={`progress ${diskProgressColor(diskPct)} w-full h-2.5 transition-all duration-500`}
-                    value={diskPct} max={100}
-                  />
-                  <p className="text-[11px] text-base-content/30 font-mono">
-                    {diskPct.toFixed(1)}% used
-                  </p>
-                </div>
-
-                {/* Swap */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                        </svg>
-                      </div>
-                      <span className="text-sm font-semibold">Swap</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-ghost badge-sm font-mono">
-                        {formatBytes(data.swap.free)} free
-                      </span>
-                      <span className="font-mono text-sm font-bold">
-                        {formatBytes(data.swap.used)} / {formatBytes(data.swap.total)}
-                      </span>
-                    </div>
-                  </div>
-                  <progress
-                    className={`progress progress-secondary w-full h-2.5 transition-all duration-500`}
-                    value={Math.max(swapPct, 0.1)} max={100}
-                  />
-                  <p className="text-[11px] text-base-content/30 font-mono">
-                    {swapPct.toFixed(1)}% used
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Quick stat cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(
-              [
-                {
-                  label: "Uptime",
-                  value: formatUptime(data.uptime),
-                  sub: "since last reboot",
-                  color: "primary",
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  ),
-                },
-                {
-                  label: "CPU Threads",
-                  value: `${data.cpuinfo.cores}c / ${data.cpuinfo.cpus}t`,
-                  sub: `${data.cpuinfo.sockets} socket(s)`,
-                  color: "success",
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M9 3H5a2 2 0 00-2 2v4m4-6h6m0 0h4a2 2 0 012 2v4M9 3v4m6-4v4M3 9h18M3 9v10a2 2 0 002 2h14a2 2 0 002-2V9" />
-                    </svg>
-                  ),
-                },
-                {
-                  label: "Boot Mode",
-                  value: data["boot-info"].mode.toUpperCase(),
-                  sub: data["current-kernel"].machine,
-                  color: "warning",
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  ),
-                },
-                {
-                  label: "HVM",
-                  value: data.cpuinfo.hvm === "1" ? "Enabled" : "Disabled",
-                  sub: "hardware virtualization",
-                  color: data.cpuinfo.hvm === "1" ? "info" : "error",
-                  icon: (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                    </svg>
-                  ),
-                },
-              ] as const
-            ).map((stat) => (
-              <div key={stat.label} className="card bg-base-100 border border-base-300 shadow-sm">
-                <div className="card-body p-4 gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center
-                      bg-${stat.color}/10 text-${stat.color}`}
-                  >
-                    {stat.icon}
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-mono text-base-content/40 uppercase tracking-widest">
-                      {stat.label}
-                    </p>
-                    <p className="font-bold font-mono text-lg leading-snug">{stat.value}</p>
-                    <p className="text-[11px] text-base-content/40 font-mono">{stat.sub}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Row 3: System info + CPU flags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* System info table */}
-            <div className="card bg-base-100 border border-base-300 shadow-sm">
-              <div className="card-body p-5">
-                <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold mb-2">
-                  System Information
-                </h2>
-                <div className="overflow-x-auto">
-                  <table className="table table-xs font-mono">
-                    <tbody>
-                      {(
-                        [
-                          ["PVE Version", data.pveversion],
-                          ["Kernel Release", data["current-kernel"].release],
-                          ["OS", data["current-kernel"].sysname],
-                          ["Architecture", data["current-kernel"].machine],
-                          ["Boot Mode", data["boot-info"].mode],
-                          ["CPU Model", data.cpuinfo.model],
-                          ["Sockets", String(data.cpuinfo.sockets)],
-                          ["Frequency", `${parseFloat(data.cpuinfo.mhz).toFixed(0)} MHz`],
-                          ["KSM Shared", formatBytes(data.ksm.shared)],
-                        ] as [string, string][]
-                      ).map(([k, v]) => (
-                        <tr key={k} className="hover:bg-base-200/60 transition-colors">
-                          <td className="text-base-content/40 w-1/3 py-2 align-top font-medium">
-                            {k}
-                          </td>
-                          <td className="py-2 break-all text-base-content/80">{v}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* CPU flags */}
-            <div className="card bg-base-100 border border-base-300 shadow-sm">
-              <div className="card-body p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
-                    CPU Flags
-                  </h2>
-                  <div className="badge badge-ghost badge-sm font-mono">
-                    {data.cpuinfo.flags.split(" ").length}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1 max-h-72 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-base-300">
-                  {data.cpuinfo.flags.split(" ").map((flag) => (
-                    <span
-                      key={flag}
-                      className="badge badge-outline badge-xs font-mono hover:badge-primary cursor-default transition-colors"
-                    >
-                      {flag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-            </div>
-          )}
-
-          {activeTab === "vm" && (
-            <div className="animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4 px-1">
-                <div className="flex items-center gap-2">
-                  <Monitor size={16} className="text-base-content/60" />
-                  <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
-                    Virtual Machines ({vms.length})
-                  </h2>
-                </div>
-                {vms.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="select select-bordered select-xs font-mono bg-base-100"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as "id" | "name")}
-                    >
-                      <option value="id">Urut: ID</option>
-                      <option value="name">Urut: Nama</option>
-                    </select>
-                    <button
-                      className="btn btn-square btn-xs btn-outline border-base-300 bg-base-100"
-                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
-                      title={sortOrder === "asc" ? "Ascending" : "Descending"}
-                    >
-                      {sortOrder === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {sortedVms.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {sortedVms.map((vm) => {
-                    const isRunning = vm.status === 'running';
-                    const memUsage = ((vm.mem ?? 0) / (vm.maxmem ?? 1)) * 100;
-                    return (
-                      <div 
-                        key={vm.vmid}
-                        onClick={() => router.push(`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${vm.vmid}`)}
-                        className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex gap-3">
-                                <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black opacity-20 uppercase tracking-tighter">
-                                            ID: {vm.vmid}
-                                        </span>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-success animate-pulse' : 'bg-error'}`}></span>
-                                    </div>
-                                    <h3 className="font-bold text-sm truncate w-40 uppercase tracking-tight leading-tight">
-                                        {vm.name || 'Unnamed'}
-                                    </h3>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-[9px] font-black block opacity-30 uppercase tracking-tighter">{params.node_name}</span>
-                                <span className={`text-[9px] font-black uppercase tracking-widest ${isRunning ? 'text-success' : 'text-error'}`}>
-                                    {vm.status}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className={`space-y-4 mb-6 transition-opacity ${!isRunning ? 'opacity-40' : ''}`}>
-                            {/* CPU */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                                    <span>CPU Load</span>
-                                    <span>{isRunning ? `${((vm.cpu ?? 0) * 100).toFixed(1)}%` : '0%'}</span>
-                                </div>
-                                <progress
-                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-primary' : ''}`}
-                                    value={isRunning ? (vm.cpu ?? 0) * 100 : 0}
-                                    max="100"
-                                />
-                            </div>
-                            {/* Memory */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                                    <span>Memory</span>
-                                    <span>{isRunning ? `${formatBytes(vm.mem ?? 0)} / ${formatBytes(vm.maxmem ?? 0)}` : 'Stopped'}</span>
-                                </div>
-                                <progress
-                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
-                                    value={isRunning ? memUsage : 0}
-                                    max="100"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-4 border-t border-base-200">
-                            <div className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
-                                {isRunning ? `UP: ${formatUptime(vm.uptime ?? 0)}` : 'Offline'}
-                            </div>
-                            <div className="flex gap-2">
-                                <button className="btn btn-ghost btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest" onClick={(e) => e.stopPropagation()}>
-                                    Console
-                                </button>
-                                <button className={`btn btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest px-3 ${isRunning ? 'btn-error btn-outline border-2' : 'btn-success text-white'}`} onClick={(e) => e.stopPropagation()}>
-                                    {isRunning ? 'Stop' : 'Start'}
-                                </button>
-                            </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-10 bg-base-100 rounded-xl border border-base-300">
-                  <p className="text-base-content/50 text-sm">No Virtual Machines found</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "ct" && (
-            <div className="animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4 px-1">
-                <div className="flex items-center gap-2">
-                  <Box size={16} className="text-base-content/60" />
-                  <h2 className="text-[11px] font-mono text-base-content/40 uppercase tracking-widest font-semibold">
-                    LXC Containers ({cts.length})
-                  </h2>
-                </div>
-                {cts.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="select select-bordered select-xs font-mono bg-base-100"
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as "id" | "name")}
-                    >
-                      <option value="id">Urut: ID</option>
-                      <option value="name">Urut: Nama</option>
-                    </select>
-                    <button
-                      className="btn btn-square btn-xs btn-outline border-base-300 bg-base-100"
-                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
-                      title={sortOrder === "asc" ? "Ascending" : "Descending"}
-                    >
-                      {sortOrder === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {sortedCts.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {sortedCts.map((ct) => {
-                    const isRunning = ct.status === 'running';
-                    const memUsage = ((ct.mem ?? 0) / (ct.maxmem ?? 1)) * 100;
-                    return (
-                      <div 
-                        key={ct.vmid}
-                        onClick={() => router.push(`/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}/nodes/${params.node_name}/ct/${ct.vmid}`)}
-                        className="bg-base-100 border border-base-300 rounded-[2rem] p-5 shadow-sm hover:shadow-md transition-all group cursor-pointer"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex gap-3">
-                                <div className={`p-3 rounded-2xl transition-colors ${isRunning ? 'bg-success/10 text-success' : 'bg-base-200 text-base-content/30'}`}>
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black opacity-20 uppercase tracking-tighter">
-                                            ID: {ct.vmid}
-                                        </span>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-success animate-pulse' : 'bg-error'}`}></span>
-                                    </div>
-                                    <h3 className="font-bold text-sm truncate w-40 uppercase tracking-tight leading-tight">
-                                        {ct.name || 'Unnamed'}
-                                    </h3>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-[9px] font-black block opacity-30 uppercase tracking-tighter">{params.node_name}</span>
-                                <span className={`text-[9px] font-black uppercase tracking-widest ${isRunning ? 'text-success' : 'text-error'}`}>
-                                    {ct.status}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className={`space-y-4 mb-6 transition-opacity ${!isRunning ? 'opacity-40' : ''}`}>
-                            {/* CPU */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                                    <span>CPU Load</span>
-                                    <span>{isRunning ? `${((ct.cpu ?? 0) * 100).toFixed(1)}%` : '0%'}</span>
-                                </div>
-                                <progress
-                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-primary' : ''}`}
-                                    value={isRunning ? (ct.cpu ?? 0) * 100 : 0}
-                                    max="100"
-                                />
-                            </div>
-                            {/* Memory */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                                    <span>Memory</span>
-                                    <span>{isRunning ? `${formatBytes(ct.mem ?? 0)} / ${formatBytes(ct.maxmem ?? 0)}` : 'Stopped'}</span>
-                                </div>
-                                <progress
-                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-info' : ''}`}
-                                    value={isRunning ? memUsage : 0}
-                                    max="100"
-                                />
-                            </div>
-                            {/* Disk */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-60">
-                                    <span>Disk</span>
-                                    <span>{isRunning ? `${formatBytes(ct.disk ?? 0)} / ${formatBytes(ct.maxdisk ?? 0)}` : 'Stopped'}</span>
-                                </div>
-                                <progress
-                                    className={`progress h-1.5 w-full ${isRunning ? 'progress-accent' : ''}`}
-                                    value={isRunning ? ((ct.disk ?? 0) / (ct.maxdisk ?? 1)) * 100 : 0}
-                                    max="100"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-4 border-t border-base-200">
-                            <div className="text-[9px] font-bold opacity-30 uppercase tracking-widest">
-                                {isRunning ? `UP: ${formatUptime(ct.uptime ?? 0)}` : 'Offline'}
-                            </div>
-                            <div className="flex gap-2">
-                                <button className="btn btn-ghost btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest" onClick={(e) => e.stopPropagation()}>
-                                    Console
-                                </button>
-                                <button className={`btn btn-xs rounded-lg text-[9px] font-black uppercase tracking-widest px-3 ${isRunning ? 'btn-error btn-outline border-2' : 'btn-success text-white'}`} onClick={(e) => e.stopPropagation()}>
-                                    {isRunning ? 'Stop' : 'Start'}
-                                </button>
-                            </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-10 bg-base-100 rounded-xl border border-base-300">
-                  <p className="text-base-content/50 text-sm">No Containers found</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex items-center justify-center gap-2 pt-2 pb-4">
-            <div className="loading loading-ring loading-xs text-primary opacity-40" />
-            <p className="text-[11px] font-mono text-base-content/30">
-              Auto-refreshing every {REFRESH_INTERVAL}s
-              {lastUpdated && (
-                <> &middot; last updated {lastUpdated.toLocaleTimeString()}</>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function TopologyPage() {
 
   if (wsLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4 pt-16 lg:pl-64">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4 pt-16 lg:pl-72">
         <span className="loading loading-spinner loading-lg text-primary"></span>
         <p className="text-sm font-bold tracking-widest animate-pulse uppercase">
           Verifying Topology Access...
@@ -44,7 +44,7 @@ export default function TopologyPage() {
   if (wsError) {
     const status = wsError.status;
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 text-center pt-16 lg:pl-64">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 text-center pt-16 lg:pl-72">
         <div className="max-w-md">
           <div className="text-9xl font-black text-primary/20 mb-4">{status || '500'}</div>
           <h1 className="text-3xl font-bold mb-2">{wsError.message}</h1>
@@ -63,9 +63,9 @@ export default function TopologyPage() {
     );
   }
 
-  // TopologyEditor dibungkus wrapper offset agar tidak tertutup sidebar & navbar
+  // TopologyEditor dibungkus wrapper offset (sekarang dihapus karena TopologyEditor pakai fixed constraint)
   return (
-    <div className="pt-16 lg:pl-64">
+    <div>
       <TopologyEditor
         workspaceId={workspaceIdInt}
         workspaceName={wsData?.data.workspace_name || 'Workspace'}

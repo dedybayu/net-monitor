@@ -48,14 +48,14 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
   }, [proxmoxId]);
 
   if (loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-base-200 lg:pl-64 z-1 relative">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-base-200 lg:pl-72 z-1 relative">
       <span className="loading loading-spinner loading-lg text-primary"></span>
       <p className="mt-4 text-[10px] font-black tracking-[0.35em] uppercase opacity-40 animate-pulse">Syncing Cluster...</p>
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-base-200 lg:pl-64 z-1 text-center p-6 text-error">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-base-200 lg:pl-72 z-1 text-center p-6 text-error">
       <ShieldAlert size={64} className="opacity-20 mb-4" />
       <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Connection Error</h2>
       <p className="opacity-60">{error}</p>
@@ -67,8 +67,8 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
   const onlineNodesCount = nodes.filter(n => n.online === 1).length;
 
   return (
-    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-64 pt-6 transition-all">
-      <div className="p-6 md:p-10 max-w-xxl mx-auto">
+    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-72 pt-6 transition-all">
+      <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
         {/* ── HEADER ── */}
         <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
@@ -166,8 +166,8 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
                   className="block group"
                 >
                   <div
-                    className={`p-6 rounded-[2rem] border shadow-sm transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden bg-base-100 ${
-                        isOnline ? 'hover:border-success/40 hover:shadow-success/5 hover:-translate-y-1' : 'opacity-80 hover:border-error/40'
+                    className={`p-6 rounded-[2rem] border border-transparent shadow-md transition-all duration-300 flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden bg-base-100 ${
+                        isOnline ? 'hover:border-success/40 hover:shadow-success/10 hover:-translate-y-1' : 'opacity-80 hover:border-error/40'
                     }`}
                   >
                     {/* Progress Bar simulasi (visual doang klo node local/dsbg) */}

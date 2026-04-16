@@ -125,15 +125,15 @@ export default function MonitorPage() {
   }, []);
 
   if (wsLoading) return (
-    // pt-16 = tinggi navbar, lg:pl-64 = lebar sidebar
-    <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4 pt-16 lg:pl-64">
+    // pt-16 = tinggi navbar, lg:pl-72 = lebar sidebar
+    <div className="min-h-screen flex flex-col items-center justify-center bg-base-300 gap-4 pt-16 lg:pl-72">
       <span className="loading loading-spinner loading-lg text-primary"></span>
       <p className="text-sm font-bold tracking-widest animate-pulse uppercase">Verifying Access...</p>
     </div>
   );
 
   if (wsError) return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 pt-16 lg:pl-64">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 pt-16 lg:pl-72">
       <div className="alert alert-error shadow-lg max-w-lg">
         <span>Error: {wsError.message}</span>
         <button onClick={() => window.location.reload()} className="btn btn-sm btn-ghost border border-white/20">Retry</button>
@@ -146,7 +146,7 @@ export default function MonitorPage() {
       pt-16  → geser konten ke bawah setinggi top navbar (h-16)
       lg:pl-64 → geser konten ke kanan selebar sidebar (w-64) di desktop
     */
-    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-16 lg:pl-64">
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-6 lg:pl-72">
 
       {/* SUB-NAVBAR halaman ini (sticky, ikut offset sidebar) */}
       <div className="navbar bg-base-100 border-b border-base-300 px-6 sticky top-16 z-40 shadow-sm">
@@ -176,7 +176,7 @@ export default function MonitorPage() {
         </div>
       </div>
 
-      <main className="p-6 md:p-10 max-w-7xl mx-auto">
+      <main className="p-6 md:p-10 max-w-xxl mx-auto">
         {/* STATS SUMMARY */}
         <div className="stats shadow bg-base-100 w-full mb-10 border border-base-300 overflow-hidden">
           <div className="stat">
