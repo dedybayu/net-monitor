@@ -10,6 +10,33 @@ interface RouteContext {
   }>;
 }
 
+/**
+ * @swagger
+ * /api/proxmox/{id}/nodes/{node_name}/vm:
+ *   get:
+ *     tags: [Proxmox]
+ *     summary: Mendapatkan daftar Virtual Machine (VM) pada node tertentu
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID dari instance Proxmox
+ *       - in: path
+ *         name: node_name
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Nama node Proxmox
+ *     responses:
+ *       200:
+ *         description: Berhasil mendapatkan daftar VM
+ *       400:
+ *         description: Parameter tidak lengkap
+ *       500:
+ *         description: Internal Server Error
+ */
 export async function GET(req: Request, { params }: RouteContext) {
   try {
     // Cukup satu kali await untuk mengambil semua parameter
