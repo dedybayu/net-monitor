@@ -58,7 +58,7 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
 
     if (loading) {
         return (
-            <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-72 pt-16">
+            <div className="min-h-screen z-1 flex flex-col items-center justify-center bg-base-200 lg:pl-72 pt-6">
                 <span className="loading loading-spinner loading-lg text-primary"></span>
                 <p className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] opacity-40 animate-pulse">Syncing Nodes...</p>
             </div>
