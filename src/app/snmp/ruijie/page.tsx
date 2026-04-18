@@ -37,7 +37,7 @@ export default function SNMPDashboard() {
 
     const fetchSNMPData = async () => {
       try {
-        const response = await fetch('/api/snmp');
+        const response = await fetch('/api/snmp/ruijie');
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.error || `HTTP error! status: ${response.status}`);
