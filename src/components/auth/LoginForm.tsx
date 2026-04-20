@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 
 export default function LoginForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const callbackUrl = searchParams.get("callbackUrl") || "/workspaces"
 
     const [email, setEmail] = useState<string>("")
     const [password, setPassword] = useState<string>("")
@@ -38,7 +40,7 @@ export default function LoginForm() {
             if (res?.error) {
                 setError("Email atau password salah")
             } else {
-                router.push("/workspaces")
+                router.push(callbackUrl)
                 router.refresh() // Memastikan middleware mendeteksi session baru
             }
         } catch {

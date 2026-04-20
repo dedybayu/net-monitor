@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import SidebarComponent, { DashboardIcon, TopologyIcon, ProxmoxIcon } from "./SidebarComponent"
+import SidebarComponent, { DashboardIcon, TopologyIcon, ProxmoxIcon, SnmpIcon } from "./SidebarComponent"
 
 export default function NavbarWorkspace() {
   const params = useParams()
@@ -13,6 +13,7 @@ export default function NavbarWorkspace() {
         { href: `/workspaces/${workspaceId}/dashboard`, label: "Dasboard", icon: <DashboardIcon /> },
         { href: `/workspaces/${workspaceId}/topology`, label: "Topology", icon: <TopologyIcon /> },
         { href: `/workspaces/${workspaceId}/proxmox`, label: "Proxmox", icon: <ProxmoxIcon /> },
+        { href: `/workspaces/${workspaceId}/snmp`, label: "SNMP", icon: <SnmpIcon /> },
       ]}
     />
   )
