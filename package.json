@@ -6,7 +6,8 @@
     "dev": "next dev --port 3090",
     "build": "next build",
     "start": "next start --port 3090",
-    "lint": "eslint"
+    "lint": "eslint",
+    "trap-listener": "tsx src/lib/snmp/trap-listener.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
