@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   const host      = searchParams.get('host')      || process.env.SNMP_HOST_MIKROTIK;
   const community = searchParams.get('community') || process.env.SNMP_COMMUNITY_MIKROTIK;
   const rootOid   = searchParams.get('oid')       || '1.3.6.1';
-  const maxOids   = Math.min(parseInt(searchParams.get('limit') || '500'), 2000);
+  const maxOids   = Math.min(parseInt(searchParams.get('limit') || '500'), 5000);
 
   if (!host || !community) {
     return NextResponse.json({ error: 'Parameter host dan community wajib diisi' }, { status: 400 });

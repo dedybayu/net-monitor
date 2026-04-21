@@ -18,6 +18,8 @@ function WalkModal({ host, community, onClose }: { host: string; community: stri
   const [errMsg, setErrMsg]   = useState('');
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [search, setSearch]   = useState('');
+  const router = useRouter();
+  const params = useParams();
 
   const runWalk = async () => {
     setStatus('loading'); setResult(null);
@@ -53,6 +55,14 @@ function WalkModal({ host, community, onClose }: { host: string; community: stri
               <p className="text-xs opacity-50 mt-0.5">Host: <code className="font-mono bg-base-200 px-1.5 py-0.5 rounded">{host}</code></p>
             </div>
             <div className="flex items-center gap-2">
+              {status === 'done' && (
+                <button 
+                  onClick={() => router.push(`/workspaces/${params.workspace_id}/snmp/ruijie/dynamic?host=${host}&community=${community}&device=ruijie`)} 
+                  className="btn btn-success btn-sm rounded-xl font-black tracking-widest text-[10px] gap-2 shadow-sm"
+                >
+                  ▶ BUKA PANEL DINAMIS
+                </button>
+              )}
               {status !== 'loading' && (
                 <button onClick={runWalk} className="btn btn-secondary btn-sm rounded-xl font-bold gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
