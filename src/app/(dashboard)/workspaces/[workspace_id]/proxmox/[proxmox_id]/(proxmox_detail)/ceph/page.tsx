@@ -72,6 +72,7 @@ export default function CephDetailPage({ params }: { params: Promise<{ proxmox_i
   const pgmap = cephData?.pgmap || {};
   const osdmap = cephData?.osdmap || {};
   const monmap = cephData?.monmap || {};
+  const mgrmap = cephData?.mgrmap || {};
 
   const usagePercent = pgmap.bytes_total ? (pgmap.bytes_used / pgmap.bytes_total) * 100 : 0;
 
@@ -106,6 +107,32 @@ export default function CephDetailPage({ params }: { params: Promise<{ proxmox_i
                {healthStatus}
             </div>
         </div>
+
+        {/* ── HEALTH CHECKS / WARNING CAUSES ── */}
+        {(!isHealthy && cephData?.health?.checks && Object.keys(cephData.health.checks).length > 0) && (
+            <div className={`mb-10 p-6 md:p-8 rounded-[2rem] border relative overflow-hidden ${isWarn ? 'bg-warning/10 border-warning/20' : 'bg-error/10 border-error/20'}`}>
+                <div className={`absolute -right-4 -top-4 opacity-5 pointer-events-none ${isWarn ? 'text-warning' : 'text-error'}`}>
+                    <AlertTriangle size={150} />
+                </div>
+                <h3 className={`text-xl font-black tracking-tight flex items-center gap-3 mb-6 relative z-10 ${isWarn ? 'text-warning' : 'text-error'}`}>
+                    {isWarn ? <AlertTriangle size={24} /> : <ShieldAlert size={24} />}
+                    Health Issues
+                </h3>
+                <div className="flex flex-col gap-3 relative z-10">
+                    {Object.entries(cephData.health.checks).map(([code, check]: [string, any]) => (
+                        <div key={code} className={`flex items-start gap-4 p-4 rounded-xl border ${isWarn ? 'bg-warning/5 border-warning/20' : 'bg-error/5 border-error/20'}`}>
+                            <div className={`mt-0.5 ${check.severity === 'HEALTH_ERR' ? 'text-error' : 'text-warning'}`}>
+                                {check.severity === 'HEALTH_ERR' ? <XCircle size={18} /> : <AlertTriangle size={18} />}
+                            </div>
+                            <div>
+                                <h4 className="font-black uppercase tracking-widest text-[10px] opacity-70 mb-1">{code}</h4>
+                                <p className="text-sm font-bold opacity-90">{check?.summary?.message || 'Details not available'}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
 
         {/* ── STATS DASHBOARD ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
@@ -182,44 +209,47 @@ export default function CephDetailPage({ params }: { params: Promise<{ proxmox_i
         </div>
 
         {/* ── STORAGE USAGE SECTION ── */}
-        <div className="bg-base-100 rounded-[2rem] border border-base-300 p-8 mb-10 overflow-hidden relative group">
+        <div className="bg-base-100 rounded-[2rem] border border-base-300 p-8 md:p-10 mb-10 overflow-hidden relative group w-full">
            <div className="absolute right-0 top-0 opacity-5 w-64 h-64 -translate-y-1/2 translate-x-1/3 group-hover:opacity-10 transition-opacity pointer-events-none">
               <Database size={256} className="text-primary"/>
            </div>
            
-           <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-6 relative z-10">
-              <Database size={24} className="text-primary" />
+           <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 mb-8 relative z-10">
+              <Database size={28} className="text-primary" />
               Storage Capacity
            </h2>
 
-           <div className="relative z-10 max-w-4xl">
-              <div className="flex justify-between items-end mb-3">
+           <div className="relative z-10 w-full">
+              <div className="flex justify-between items-end mb-4">
                  <div>
                     <p className="text-[10px] font-black tracking-[0.2em] uppercase opacity-50 mb-1">Used Space</p>
-                    <p className="text-3xl font-black">{formatBytes(pgmap.bytes_used)}</p>
+                    <p className="text-4xl md:text-5xl font-black tracking-tighter text-base-content leading-none">{formatBytes(pgmap.bytes_used)}</p>
                  </div>
                  <div className="text-right">
                     <p className="text-[10px] font-black tracking-[0.2em] uppercase opacity-50 mb-1">Total Capacity</p>
-                    <p className="text-xl font-black opacity-80">{formatBytes(pgmap.bytes_total)}</p>
+                    <p className="text-2xl md:text-3xl font-black opacity-80 tracking-tighter leading-none">{formatBytes(pgmap.bytes_total)}</p>
                  </div>
               </div>
 
               {/* Enhanced Progress Bar */}
-              <div className="h-4 bg-base-300 rounded-full overflow-hidden flex w-full">
+              <div className="h-6 md:h-8 bg-base-300 rounded-full overflow-hidden flex w-full relative">
                   <div 
                       className={`h-full rounded-full transition-all duration-1000 ${usagePercent >= 80 ? 'bg-error' : usagePercent >= 60 ? 'bg-warning' : 'bg-primary'}`} 
                       style={{ width: `${usagePercent}%` }}
                   ></div>
+                  <div className="absolute inset-0 flex items-center py-1 px-4 justify-between pointer-events-none">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-primary-content mix-blend-difference">{usagePercent.toFixed(1)}% Used</span>
+                  </div>
               </div>
               <div className="flex justify-between mt-3">
-                 <p className="text-xs font-bold opacity-50 uppercase tracking-widest">{usagePercent.toFixed(1)}% Used</p>
-                 <p className="text-xs font-bold opacity-50 uppercase tracking-widest">{formatBytes(pgmap.bytes_avail)} Available</p>
+                 <p className="text-xs font-black opacity-50 uppercase tracking-widest">{usagePercent.toFixed(1)}% Used</p>
+                 <p className="text-xs font-black opacity-50 uppercase tracking-widest text-primary">{formatBytes(pgmap.bytes_avail)} Available</p>
               </div>
            </div>
         </div>
 
-        {/* ── MONITORS & OSD DETAILS ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ── MONITORS, MGR & PGs DETAILS ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Monitors List */}
             <div className="bg-base-100 border border-base-300 rounded-[2rem] p-8">
                 <h2 className="text-xl font-black tracking-tight flex items-center gap-3 mb-6">
@@ -254,6 +284,46 @@ export default function CephDetailPage({ params }: { params: Promise<{ proxmox_i
                             </div>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* Manager Daemon & Modules */}
+            <div className="bg-base-100 border border-base-300 rounded-[2rem] p-8">
+                <h2 className="text-xl font-black tracking-tight flex items-center gap-3 mb-6">
+                    <Activity size={20} className="text-accent" />
+                    Manager Daemons
+                </h2>
+                <div className="space-y-4">
+                    {/* Active Daemon */}
+                    <div className="p-4 bg-base-200/50 rounded-2xl border border-transparent hover:border-base-300 transition-colors">
+                        <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest mb-3">Active Daemon</p>
+                        <div className="flex items-center gap-4">
+                           <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                                mgrmap?.available ? 'bg-success/10 border-success/20 text-success' : 'bg-warning/10 border-warning/20 text-warning'
+                            }`}>
+                                {mgrmap?.available ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+                            </div>
+                            <div>
+                                <p className="font-black uppercase tracking-tight text-lg leading-none mb-1">{mgrmap?.active_name || 'N/A'}</p>
+                                <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{mgrmap?.active_addr?.split('/')[0] || 'Unknown IP'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Active Modules */}
+                    <div className="pt-2">
+                        <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest mb-3">Active Modules ({mgrmap?.modules?.length || 0})</p>
+                        <div className="flex flex-wrap gap-2">
+                            {mgrmap?.modules?.map((mod: string, idx: number) => (
+                                <span key={idx} className="badge badge-sm badge-outline font-black text-[9px] uppercase tracking-widest py-3 px-3 shadow-sm border-base-300 bg-base-100">
+                                    {mod}
+                                </span>
+                            ))}
+                            {(!mgrmap?.modules || mgrmap.modules.length === 0) && (
+                                <p className="text-xs font-black uppercase tracking-widest opacity-40">No active modules</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
