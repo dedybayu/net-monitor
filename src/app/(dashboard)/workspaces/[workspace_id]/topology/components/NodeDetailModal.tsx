@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { NodeDetailResponse, StatusApiResponse } from '../types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -519,6 +520,11 @@ export function NodeDetailModal({
   const [deleteNodeConfirm, setDeleteNodeConfirm] = useState(false);
   const [isDeletingNode, setIsDeletingNode] = useState(false);
   const [deleteNodeError, setDeleteNodeError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleServiceAdded = useCallback(() => {
     setIsAddingService(false);
@@ -550,8 +556,8 @@ export function NodeDetailModal({
 
   const hasServices = nodeDetail?.services && nodeDetail.services.length > 0;
 
-  return (
-    <div className="modal modal-open">
+  const modalContent = (
+    <div className="modal modal-open z-[9999]">
       <div className="modal-box w-11/12 max-w-2xl border border-base-300 shadow-2xl bg-base-100 p-0 overflow-hidden">
 
         {/* ── Header (view) ── */}
@@ -727,4 +733,7 @@ export function NodeDetailModal({
       <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 }

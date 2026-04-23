@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Node } from 'reactflow';
 
 interface NewNodeData {
@@ -18,6 +19,11 @@ const DEFAULT_FORM: NewNodeData = { label: '', target: '', port: '', method: 'IC
 
 export function AddNodeModal({ onAdd, onClose, screenToFlowPosition }: AddNodeModalProps) {
   const [form, setForm] = useState<NewNodeData>(DEFAULT_FORM);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +54,8 @@ export function AddNodeModal({ onAdd, onClose, screenToFlowPosition }: AddNodeMo
     setForm(DEFAULT_FORM);
   };
 
-  return (
-    <div className="modal modal-open">
+  const modalContent = (
+    <div className="modal modal-open z-[9999]">
       <div className="modal-box border border-base-300 shadow-2xl bg-base-100">
         <h3 className="font-black text-lg uppercase tracking-tight">Tambah Perangkat Baru</h3>
         
@@ -127,4 +133,7 @@ export function AddNodeModal({ onAdd, onClose, screenToFlowPosition }: AddNodeMo
       <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 }
