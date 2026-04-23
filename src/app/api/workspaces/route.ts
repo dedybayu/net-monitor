@@ -33,13 +33,31 @@ export async function GET() {
         },
         include: {
           // Sertakan info owner jika ingin tampilkan "Shared by X"
-          owner: { select: { name: true, email: true } }
+          owner: { select: { name: true, email: true } },
+          users: {
+            where: { user_id: userId },
+            select: { permision: true }
+          }
         },
         orderBy: { created_at: 'desc' }
       }),
     ]);
 
-    return NextResponse.json({ owned: ownedWorkspaces, shared: sharedWorkspaces });
+    const ownedWithPermission = ownedWorkspaces.map(ws => ({
+      ...ws,
+      permission: "owner"
+    }));
+
+    const sharedWithPermission = sharedWorkspaces.map(ws => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { users, ...rest } = ws;
+      return {
+        ...rest,
+        permission: users?.[0]?.permision || "viewer"
+      };
+    });
+
+    return NextResponse.json({ owned: ownedWithPermission, shared: sharedWithPermission });
   } catch (error) {
     console.error("GET Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });

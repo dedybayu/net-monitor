@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Folder, Trash2, LayoutDashboard, X, Edit, FolderPlus, AlignLeft } from "lucide-react";
 
 interface Owner {
   name: string | null;
@@ -162,15 +163,91 @@ export default function WorkspacePage() {
   const [modalOpen, setModalOpen]   = useState(false);
   const [activeTab, setActiveTab]   = useState<"owned" | "shared">("owned");
 
-  useEffect(() => {
+  // Form states
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
+  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchWorkspaces = () => {
     fetch("/api/workspaces")
       .then((res) => res.json())
       .then((d: WorkspaceData) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchWorkspaces();
   }, []);
 
   const openModal  = (ws: Workspace) => { setSelectedWs(ws); setModalOpen(true); };
   const closeModal = () => setModalOpen(false);
+
+  const openCreateModal = () => {
+    setFormMode("create");
+    setFormData({ name: "", description: "" });
+  };
+
+  const openEditModal = () => {
+    if (selectedWs) {
+      setFormMode("edit");
+      setFormData({ name: selectedWs.workspace_name, description: selectedWs.workspace_description });
+      setModalOpen(false);
+    }
+  };
+
+  const closeFormModal = () => {
+    setFormMode(null);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
+    setIsSubmitting(true);
+
+    try {
+      if (formMode === "create") {
+        await fetch("/api/workspaces", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspace_name: formData.name,
+            workspace_description: formData.description
+          })
+        });
+      } else if (formMode === "edit" && selectedWs) {
+        await fetch("/api/workspaces", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspace_id: selectedWs.workspace_id,
+            workspace_name: formData.name,
+            workspace_description: formData.description
+          })
+        });
+      }
+      await fetchWorkspaces();
+      closeFormModal();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedWs) return;
+    if (!confirm(`Are you sure you want to delete "${selectedWs.workspace_name}"? This action cannot be undone.`)) return;
+    
+    try {
+      await fetch(`/api/workspaces?id=${selectedWs.workspace_id}`, {
+        method: "DELETE"
+      });
+      await fetchWorkspaces();
+      setModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const totalCount = data.owned.length + data.shared.length;
 
@@ -186,8 +263,8 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div className="min-h-screen bg-base-200 pt-16 lg:pl-64 font-sans">
-      <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-6">
+      <div className="p-6 md:p-10 max-w-xxl mx-auto">
 
         {/* ── PAGE HEADER ── */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
@@ -204,7 +281,7 @@ export default function WorkspacePage() {
             </p>
           </div>
 
-          <button className="btn btn-primary rounded-2xl gap-2 px-6 shadow-lg shadow-primary/20 font-bold">
+          <button onClick={openCreateModal} className="btn btn-primary rounded-2xl gap-2 px-6 shadow-lg shadow-primary/20 font-bold">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
             </svg>
@@ -283,7 +360,7 @@ export default function WorkspacePage() {
         <>
           <div className="fixed inset-0 z-150 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
           <div className="fixed inset-0 z-150 flex items-end sm:items-center justify-center p-4 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-md bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden animate-[slideUp_0.25s_ease]">
+            <div className="pointer-events-auto w-full max-w-3xl bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden animate-[slideUp_0.25s_ease]">
 
               {/* Header strip */}
               <div className="relative bg-primary px-8 pt-8 pb-10 text-primary-content overflow-hidden">
@@ -333,14 +410,103 @@ export default function WorkspacePage() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href={`/workspaces/${selectedWs.workspace_id}/dashboard`} className="btn btn-primary flex-1 rounded-2xl font-black">
-                    Enter Dashboard
+                  <Link href={`/workspaces/${selectedWs.workspace_id}/dashboard`} className="btn btn-primary flex-1 rounded-2xl font-black gap-2">
+                    <LayoutDashboard size={16} /> Enter Dashboard
                   </Link>
-                  <button className="btn btn-ghost flex-1 rounded-2xl font-black border border-base-300">
-                    Edit Settings
+                  {(selectedWs.permission === "owner" || selectedWs.permission === "admin") && (
+                    <>
+                      <button onClick={openEditModal} className="btn btn-ghost flex-1 rounded-2xl font-black border border-base-300 gap-2">
+                        <Edit size={16} /> Edit Settings
+                      </button>
+                      {selectedWs.permission === "owner" && (
+                        <button onClick={handleDelete} className="btn btn-error btn-outline flex-1 rounded-2xl font-black border border-error/30 hover:border-error gap-2">
+                          <Trash2 size={16} /> Delete
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── FORM MODAL (CREATE/EDIT) ── */}
+      {formMode && (
+        <>
+          <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm" onClick={closeFormModal} />
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="bg-base-100 rounded-[2.5rem] shadow-2xl overflow-hidden w-full max-w-lg animate-[slideUp_0.3s_ease] relative border border-base-content/5">
+              
+              {/* Premium Header */}
+              <div className="relative overflow-hidden px-8 pt-10 pb-8 bg-gradient-to-br from-base-200 to-base-100">
+                <div className="absolute -right-12 -top-12 h-48 w-48 bg-primary/5 rounded-full blur-3xl"></div>
+                
+                <div className="flex justify-between items-start relative z-10">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                       {formMode === "create" ? <FolderPlus size={28} /> : <Edit size={28} />}
+                    </div>
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight leading-none text-base-content mb-1.5">
+                        {formMode === "create" ? "New Workspace" : "Edit Workspace"}
+                      </h3>
+                      <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">
+                         {formMode === "create" ? "Create environment" : "Update settings"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <button onClick={closeFormModal} className="btn btn-circle btn-sm btn-ghost bg-base-200 hover:bg-base-300">
+                    <X size={16} />
                   </button>
                 </div>
               </div>
+
+              {/* Form Body */}
+              <form onSubmit={handleFormSubmit} className="p-8 pt-4 space-y-6 bg-base-100 relative z-10">
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                    <Folder size={12} />
+                    Workspace Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input input-lg w-full bg-base-200/50 focus:bg-base-100 focus:border-primary border-2 border-transparent focus:border-primary/50 rounded-2xl font-black transition-all text-base focus:ring-4 focus:ring-primary/10"
+                    placeholder="e.g. Production Cluster"
+                  />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-50 ml-1">
+                    <AlignLeft size={12} />
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="textarea w-full bg-base-200/50 focus:bg-base-100 focus:border-primary border-2 border-transparent focus:border-primary/50 rounded-2xl h-28 font-medium transition-all text-sm resize-none focus:ring-4 focus:ring-primary/10 p-4"
+                    placeholder="Describe this environment..."
+                  ></textarea>
+                </div>
+                
+                <div className="pt-6 flex justify-end gap-3 border-t border-base-200/50">
+                  <button type="button" onClick={closeFormModal} className="btn btn-ghost rounded-xl font-bold px-6">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={isSubmitting} className="btn btn-primary rounded-xl font-black px-8 shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all">
+                    {isSubmitting ? (
+                      <span className="loading loading-spinner loading-sm"></span>
+                    ) : (
+                      formMode === "create" ? "Create Workspace" : "Save Changes"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </>
