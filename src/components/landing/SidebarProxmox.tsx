@@ -12,10 +12,10 @@ export default function NavbarProxmox() {
     <SidebarComponent
       menuItems={[
         { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}`, label: "Dasboard", icon: <DashboardIcon /> },
+        { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/ceph`, label: "Ceph", icon: <CephIcon /> },
         { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/nodes`, label: "Node List", icon: <NodeIcon /> },
         { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/resources`, label: "Resources", icon: <ResourcesIcon /> },
         { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/recent-tasks`, label: "Recent Tasks", icon: <TaskIcon /> },
-        { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/ceph`, label: "Ceph", icon: <CephIcon /> },
         { href: `/workspaces/${workspaceId}/proxmox/${proxmoxId}/cts`, label: "CT List", icon: <CTIcon /> },
       ]}
     />

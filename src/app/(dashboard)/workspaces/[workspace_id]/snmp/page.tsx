@@ -88,7 +88,7 @@ export default function SNMPPage() {
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content font-sans pt-6 lg:pl-72">
-      <div className="p-6 md:p-10 max-w-4xl mx-auto">
+      <div className="p-6 md:p-8 max-w-xxl mx-auto">
 
         {/* ── PAGE HEADER ── */}
         <div className="mb-10">

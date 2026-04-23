@@ -2,7 +2,17 @@
 
 import Link from 'next/link';
 import { useEffect, useState, use } from 'react';
-import { ArrowLeft, Server, Activity, ShieldCheck, ShieldAlert, Cpu, Network, CheckCircle, XCircle, HardDrive } from 'lucide-react';
+import { ArrowLeft, Server, Activity, ShieldCheck, ShieldAlert, Cpu, Network, CheckCircle, XCircle, HardDrive, Database } from 'lucide-react';
+
+// Format Bytes Helper
+function formatBytes(bytes: number, decimals = 2) {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
 
 // Definisi Interface sesuai JSON Proxmox
 interface ProxmoxClusterItem {
@@ -19,12 +29,19 @@ interface ProxmoxClusterItem {
   level?: string;
   local?: number;
   nodeid?: number;
+  cpu?: number;
+  maxcpu?: number;
+  mem?: number;
+  maxmem?: number;
+  disk?: number;
+  maxdisk?: number;
 }
 
 export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmox_id: string, workspace_id: string }> }) {
   const { proxmox_id: proxmoxId, workspace_id: workspaceId } = use(params);
 
   const [clusterData, setClusterData] = useState<ProxmoxClusterItem[]>([]);
+  const [clusterStorage, setClusterStorage] = useState<{ maxdisk: number; disk: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +55,7 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
       })
       .then((json) => {
         if (json.data) setClusterData(json.data);
+        if (json.clusterStorage) setClusterStorage(json.clusterStorage);
         setLoading(false);
       })
       .catch((err) => {
@@ -65,6 +83,18 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
   const clusterInfo = clusterData.find((item) => item.type === 'cluster');
   const nodes = clusterData.filter((item) => item.type === 'node');
   const onlineNodesCount = nodes.filter(n => n.online === 1).length;
+
+  const totalCpuUsage = nodes.reduce((acc, node) => acc + ((node.cpu || 0) * (node.maxcpu || 0)), 0);
+  const totalMaxCpu = nodes.reduce((acc, node) => acc + (node.maxcpu || 0), 0);
+  const cpuPercent = totalMaxCpu > 0 ? (totalCpuUsage / totalMaxCpu) * 100 : 0;
+
+  const totalMemUsage = nodes.reduce((acc, node) => acc + (node.mem || 0), 0);
+  const totalMaxMem = nodes.reduce((acc, node) => acc + (node.maxmem || 0), 0);
+  const memPercent = totalMaxMem > 0 ? (totalMemUsage / totalMaxMem) * 100 : 0;
+
+  const totalDiskUsage = clusterStorage ? clusterStorage.disk : nodes.reduce((acc, node) => acc + (node.disk || 0), 0);
+  const totalMaxDisk = clusterStorage ? clusterStorage.maxdisk : nodes.reduce((acc, node) => acc + (node.maxdisk || 0), 0);
+  const diskPercent = totalMaxDisk > 0 ? (totalDiskUsage / totalMaxDisk) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-72 pt-6 transition-all">
@@ -141,6 +171,68 @@ export default function ProxmoxDetailPage({ params }: { params: Promise<{ proxmo
               <p className="text-4xl font-black text-error">{(clusterInfo?.nodes || 0) - onlineNodesCount}</p>
             </div>
           </div>
+        </div>
+
+        {/* ── RESOURCE SUMMARY ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+            {/* CPU */}
+            <div className="bg-base-100 rounded-[2rem] border border-base-300 p-8 flex flex-col relative overflow-hidden group hover:border-primary/30 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-primary/10 text-primary p-3 rounded-2xl">
+                            <Cpu size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Total CPU</p>
+                            <p className="text-2xl font-black text-base-content leading-none mt-1">{cpuPercent.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs font-bold opacity-50">{totalCpuUsage.toFixed(1)} / {totalMaxCpu} Cores</p>
+                    </div>
+                </div>
+                <progress className="progress progress-primary w-full h-2 bg-base-300" value={cpuPercent} max="100"></progress>
+            </div>
+
+            {/* RAM */}
+            <div className="bg-base-100 rounded-[2rem] border border-base-300 p-8 flex flex-col relative overflow-hidden group hover:border-info/30 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-info/10 text-info p-3 rounded-2xl">
+                            <Activity size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Total RAM</p>
+                            <p className="text-2xl font-black text-base-content leading-none mt-1">{memPercent.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs font-bold opacity-50">{formatBytes(totalMemUsage)}</p>
+                        <p className="text-[10px] font-black uppercase opacity-30 tracking-widest">OF {formatBytes(totalMaxMem)}</p>
+                    </div>
+                </div>
+                <progress className="progress progress-info w-full h-2 bg-base-300" value={memPercent} max="100"></progress>
+            </div>
+
+            {/* Storage */}
+            <div className="bg-base-100 rounded-[2rem] border border-base-300 p-8 flex flex-col relative overflow-hidden group hover:border-warning/30 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-warning/10 text-warning p-3 rounded-2xl">
+                            <Database size={24} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Total Storage</p>
+                            <p className="text-2xl font-black text-base-content leading-none mt-1">{diskPercent.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs font-bold opacity-50">{formatBytes(totalDiskUsage)}</p>
+                        <p className="text-[10px] font-black uppercase opacity-30 tracking-widest">OF {formatBytes(totalMaxDisk)}</p>
+                    </div>
+                </div>
+                <progress className="progress progress-warning w-full h-2 bg-base-300" value={diskPercent} max="100"></progress>
+            </div>
         </div>
 
         {/* ── NODES LIST ── */}

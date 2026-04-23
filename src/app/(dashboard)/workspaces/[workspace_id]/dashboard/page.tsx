@@ -151,7 +151,7 @@ export default function MonitorPage() {
 
   return (
     <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans pt-16 lg:pl-72 transition-all">
-      <main className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-10">
+      <main className="p-6 md:p-10 max-w-xxl mx-auto space-y-10">
         
         {/* ── HEADER ── */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-base-100 p-8 rounded-[2rem] border border-base-300 shadow-sm relative overflow-hidden">
