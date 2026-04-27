@@ -43,7 +43,7 @@ export default function NoVncConsole({ proxmoxId, node, vmid }: NoVncConsoleProp
 
       // 2. Buat URL WebSocket Proxy dengan ticket dan port
       const vncBaseUrl = process.env.NEXT_PUBLIC_VNC_WS_URL 
-        || `ws://${window.location.hostname}:3091`;
+        || `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:3091`;
       const wsUrl = `${vncBaseUrl}/?proxmox_id=${proxmoxId}&node=${node}&vmid=${vmid}&port=${port}&vncticket=${encodeURIComponent(ticket)}`;
 
       // 3. Import RFB dynamically from novnc-next
