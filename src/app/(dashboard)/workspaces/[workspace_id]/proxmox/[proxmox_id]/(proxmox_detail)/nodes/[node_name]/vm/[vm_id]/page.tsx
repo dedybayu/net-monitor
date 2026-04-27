@@ -9,6 +9,9 @@ import {
   Zap, Monitor, Clock, Play, AlertTriangle, ArrowLeft, Terminal, RefreshCw, PowerOff, RotateCcw
 } from "lucide-react";
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const NoVncConsole = dynamic(() => import('@/src/components/proxmox/NoVncConsole'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -193,6 +196,30 @@ export default function VMDetailPage({
   
   const REFRESH_INTERVAL = 5;
   const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
+  const [proxmoxHost, setProxmoxHost] = useState<{ host: string; port: number } | null>(null);
+  const [showConsole, setShowConsole] = useState(false);
+
+  useEffect(() => {
+    const fetchProxmoxData = async () => {
+      try {
+        const res = await fetch(`/api/workspaces/${params.workspace_id}/proxmox/${params.proxmox_id}`);
+        if (res.ok) {
+          const pData = await res.json();
+          if (pData.proxmox_host) {
+            setProxmoxHost({ host: pData.proxmox_host, port: pData.proxmox_port || 8006 });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch Proxmox data:", err);
+      }
+    };
+    fetchProxmoxData();
+  }, [params.workspace_id, params.proxmox_id]);
+
+  const handleOpenConsole = () => {
+    if (!proxmoxHost || !data) return;
+    setShowConsole(true);
+  };
 
   const fetchStatus = async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -293,7 +320,12 @@ export default function VMDetailPage({
             {/* Top action buttons */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-3 bg-base-100 p-1.5 rounded-3xl border border-base-300 shadow-sm mr-2">
-                    <button className="btn btn-ghost hover:bg-base-200 btn-circle btn-sm text-base-content/40 hover:text-base-content">
+                    <button 
+                        onClick={handleOpenConsole}
+                        disabled={!proxmoxHost}
+                        className="btn btn-ghost hover:bg-base-200 btn-circle btn-sm text-base-content/40 hover:text-base-content tooltip tooltip-bottom"
+                        data-tip="Open Console"
+                    >
                         <Terminal size={14}/>
                     </button>
                     {!isRunning ? (
@@ -548,6 +580,50 @@ export default function VMDetailPage({
         </div>
 
       </div>
+
+      {/* ── Console Modal (Iframe) ── */}
+      {showConsole && proxmoxHost && data && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-6">
+          <div className="bg-base-100 rounded-3xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-base-300">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-base-200 border-b border-base-300">
+              <div className="flex items-center gap-3">
+                <Terminal size={18} className="opacity-50" />
+                <h3 className="font-bold tracking-wide">Console: {data.name}</h3>
+                <div className="badge badge-sm badge-ghost opacity-50 ml-2">ID: {data.vmid}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    const iframe = document.getElementById('proxmox-console-iframe') as HTMLIFrameElement;
+                    if (iframe) iframe.src = iframe.src;
+                  }}
+                  className="btn btn-sm btn-circle btn-ghost"
+                  title="Reconnect"
+                >
+                  <RotateCcw size={14} />
+                </button>
+                <button 
+                  onClick={() => setShowConsole(false)}
+                  className="btn btn-sm btn-circle btn-ghost text-error"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            {/* Modal Body / NoVncConsole */}
+            <div className="flex-1 w-full bg-black relative rounded-b-3xl">
+              <NoVncConsole 
+                proxmoxId={params.proxmox_id}
+                node={params.node_name}
+                vmid={params.vm_id}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
