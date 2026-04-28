@@ -193,6 +193,7 @@ export default function VMDetailPage({
   const [data, setData] = useState<VMStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, action: string, actionName: string} | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   const REFRESH_INTERVAL = 5;
@@ -240,8 +241,16 @@ export default function VMDetailPage({
   };
 
   const handlePowerAction = async (action: string, actionName: string, requireConfirm: boolean = true) => {
-    if (requireConfirm && !confirm(`Are you sure you want to ${actionName} ${data?.name || "this VM"}?`)) return;
+    if (requireConfirm) {
+      setConfirmModal({ isOpen: true, action, actionName });
+      return;
+    }
+    await executePowerAction(action, actionName);
+  };
+
+  const executePowerAction = async (action: string, actionName: string) => {
     setActionLoading(true);
+    setConfirmModal(null);
     try {
       const res = await fetch(`/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${params.vm_id}/power/${action}`, {
         method: "POST",
@@ -351,33 +360,33 @@ export default function VMDetailPage({
                         <Terminal size={14}/>
                     </button>
                     {data.status === "stopped" ? (
-                      <button onClick={() => handlePowerAction("start", "start", false)} disabled={actionLoading} className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
+                      <button onClick={() => handlePowerAction("start", "Power On")} disabled={actionLoading} className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
                         {actionLoading ? <span className="loading loading-spinner loading-xs mr-1"></span> : <Play size={14} className="mr-1"/>} Power On
                       </button>
                     ) : data.qmpstatus === "paused" ? (
                       <>
-                        <button onClick={() => handlePowerAction("resume", "resume", false)} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                        <button onClick={() => handlePowerAction("resume", "Resume")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
                           {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <PlayCircle size={14}/>} Resume
                         </button>
-                        <button onClick={() => handlePowerAction("stop", "stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
                           <Zap size={14}/> Stop
                         </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => handlePowerAction("suspend", "suspend", false)} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                        <button onClick={() => handlePowerAction("suspend", "Suspend")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
                           {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <Pause size={14}/>} Suspend
                         </button>
-                        <button onClick={() => handlePowerAction("reboot", "reboot")} disabled={actionLoading} className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
+                        <button onClick={() => handlePowerAction("reboot", "Reboot")} disabled={actionLoading} className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
                           <RotateCcw size={14}/> Reboot
                         </button>
-                        <button onClick={() => handlePowerAction("reset", "reset")} disabled={actionLoading} className="btn bg-error/10 hover:bg-error/20 text-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                        <button onClick={() => handlePowerAction("reset", "Reset")} disabled={actionLoading} className="btn bg-error/10 hover:bg-error/20 text-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
                           <RefreshCcw size={14}/> Reset
                         </button>
-                        <button onClick={() => handlePowerAction("shutdown", "shutdown")} disabled={actionLoading} className="btn bg-base-200 hover:bg-base-300 text-base-content gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                        <button onClick={() => handlePowerAction("shutdown", "Shutdown")} disabled={actionLoading} className="btn bg-base-200 hover:bg-base-300 text-base-content gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
                           <PowerOff size={14}/> Shutdown
                         </button>
-                        <button onClick={() => handlePowerAction("stop", "stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
                           <Zap size={14}/> Stop
                         </button>
                       </>
@@ -661,6 +670,40 @@ export default function VMDetailPage({
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Power Confirmation Modal ── */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="modal modal-open z-[200]">
+          <div className="modal-box bg-base-100 rounded-3xl shadow-xl border border-base-300">
+            <h3 className="font-black tracking-tight text-lg flex items-center gap-2 text-warning mb-4">
+              <AlertTriangle size={24} />
+              Confirm Action
+            </h3>
+            <p className="text-sm font-medium opacity-80 leading-relaxed">
+              Are you sure you want to <strong>{confirmModal.actionName}</strong> the virtual machine <strong>{data?.name || "this VM"}</strong>? 
+              <br/>This action may affect running services and operations.
+            </p>
+            <div className="modal-action mt-8">
+              <button 
+                className="btn btn-ghost rounded-2xl text-xs font-bold uppercase tracking-widest px-6"
+                onClick={() => setConfirmModal(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-warning rounded-2xl text-xs font-black uppercase tracking-widest text-warning-content shadow-sm shadow-warning/20 border-none px-6"
+                onClick={() => executePowerAction(confirmModal.action, confirmModal.actionName)}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <span className="loading loading-spinner loading-xs mr-2"></span> : null} 
+                Proceed
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop bg-black/40 backdrop-blur-[2px]" onClick={() => !actionLoading && setConfirmModal(null)}></div>
         </div>
       )}
 
