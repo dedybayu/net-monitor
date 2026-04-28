@@ -6,7 +6,7 @@ import React, { useEffect, useState, use } from "react";
 import {
   Cpu, MemoryStick, HardDrive, Activity,
   ArrowUpCircle, ArrowDownCircle, Settings,
-  Zap, Monitor, Clock, Play, AlertTriangle, ArrowLeft, Terminal, RefreshCw, PowerOff, RotateCcw
+  Zap, Monitor, Clock, Play, AlertTriangle, ArrowLeft, Terminal, RefreshCw, PowerOff, RotateCcw, Pause, PlayCircle, RefreshCcw
 } from "lucide-react";
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -192,6 +192,7 @@ export default function VMDetailPage({
 
   const [data, setData] = useState<VMStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   const REFRESH_INTERVAL = 5;
@@ -235,6 +236,27 @@ export default function VMDetailPage({
     } finally {
       if (isInitial) setLoading(false);
       setCountdown(REFRESH_INTERVAL);
+    }
+  };
+
+  const handlePowerAction = async (action: string, actionName: string, requireConfirm: boolean = true) => {
+    if (requireConfirm && !confirm(`Are you sure you want to ${actionName} ${data?.name || "this VM"}?`)) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/proxmox/${params.proxmox_id}/nodes/${params.node_name}/vm/${params.vm_id}/power/${action}`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        fetchStatus(true);
+      } else {
+        const err = await res.json();
+        alert(`Failed to ${actionName}: ${err.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error(`Failed to ${actionName} VM:`, error);
+      alert(`Failed to ${actionName} VM`);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -328,17 +350,35 @@ export default function VMDetailPage({
                     >
                         <Terminal size={14}/>
                     </button>
-                    {!isRunning ? (
-                      <button className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
-                        <Play size={14} className="mr-1"/> Power On
+                    {data.status === "stopped" ? (
+                      <button onClick={() => handlePowerAction("start", "start", false)} disabled={actionLoading} className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
+                        {actionLoading ? <span className="loading loading-spinner loading-xs mr-1"></span> : <Play size={14} className="mr-1"/>} Power On
                       </button>
+                    ) : data.qmpstatus === "paused" ? (
+                      <>
+                        <button onClick={() => handlePowerAction("resume", "resume", false)} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                          {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <PlayCircle size={14}/>} Resume
+                        </button>
+                        <button onClick={() => handlePowerAction("stop", "stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                          <Zap size={14}/> Stop
+                        </button>
+                      </>
                     ) : (
                       <>
-                        <button className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
+                        <button onClick={() => handlePowerAction("suspend", "suspend", false)} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                          {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <Pause size={14}/>} Suspend
+                        </button>
+                        <button onClick={() => handlePowerAction("reboot", "reboot")} disabled={actionLoading} className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
                           <RotateCcw size={14}/> Reboot
                         </button>
-                        <button className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
-                          <PowerOff size={14}/> Stop
+                        <button onClick={() => handlePowerAction("reset", "reset")} disabled={actionLoading} className="btn bg-error/10 hover:bg-error/20 text-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                          <RefreshCcw size={14}/> Reset
+                        </button>
+                        <button onClick={() => handlePowerAction("shutdown", "shutdown")} disabled={actionLoading} className="btn bg-base-200 hover:bg-base-300 text-base-content gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                          <PowerOff size={14}/> Shutdown
+                        </button>
+                        <button onClick={() => handlePowerAction("stop", "stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                          <Zap size={14}/> Stop
                         </button>
                       </>
                     )}
