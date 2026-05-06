@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { NodeDetailResponse, StatusApiResponse } from '../types';
+import { NodeDetailResponse, StatusApiResponse, NodeService } from '../types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -664,7 +664,7 @@ export function NodeDetailModal({
                   <span className="loading loading-dots loading-md opacity-20"></span>
                 </div>
               ) : hasServices ? (
-                nodeDetail!.services.map((svc) => (
+                nodeDetail!.services.map((svc: NodeService) => (
                   <ServiceRow key={svc.node_service_id} svc={svc}
                     workspaceId={workspaceId} nodeId={selectedNodeId!} serviceStatusData={serviceStatusData} onMutated={onServiceAdded} />
                 ))

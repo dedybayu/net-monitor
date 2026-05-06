@@ -1,6 +1,7 @@
 // File path: app/api/workspace/[workspace_id]/nodes/[node_id]/route.ts
 
 import { NextResponse } from 'next/server';
+import { type NodeService } from '@prisma/client';
 import { prisma } from '@/src/lib/prisma/client';
 
 interface RouteParams {
@@ -40,7 +41,7 @@ export async function GET(req: Request, { params }: RouteParams) {
       node_ip_address:  node.node_ip_address,
       node_method:      node.node_method,
       node_port:        node.node_port,
-      services: node.services.map((svc) => ({
+      services: node.services.map((svc: NodeService) => ({
         node_service_id:          svc.node_service_id,
         node_service_name:        svc.node_service_name,
         node_service_description: svc.node_service_description,

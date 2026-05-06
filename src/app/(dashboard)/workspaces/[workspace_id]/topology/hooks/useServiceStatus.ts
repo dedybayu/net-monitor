@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
-import { MonitoringTarget, NodeDetailResponse, StatusApiResponse } from '../types';
+import { MonitoringTarget, NodeDetailResponse, StatusApiResponse, NodeService } from '../types';
 import { statusFetcher, detailFetcher } from '../fetchers';
-import { useParams } from 'next/navigation'; // Tambahkan ini
+import { useParams } from 'next/navigation'; 
 
 
 // const WORKSPACE_ID = 1;
@@ -30,7 +30,7 @@ export function useServiceStatus({ selectedNodeId, isDetailOpen }: UseServiceSta
 
   const servicePayload = useMemo<MonitoringTarget[]>(() => {
     if (!nodeDetail?.services) return [];
-    return nodeDetail.services.map((svc) => ({
+    return nodeDetail.services.map((svc: NodeService) => ({
       ip: svc.node_service_ip_address,
       port: svc.node_service_port || 0,
     }));
