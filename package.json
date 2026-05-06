@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "dev:demo": "cross-env DEMO_MODE=true tsx server.ts",
     "build": "next build",
-    "start": "cross-env NODE_ENV=production node server.js",
+    "start": "cross-env NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "trap-listener": "tsx src/lib/snmp/trap-listener.ts",
     "vnc-proxy": "tsx --env-file=.env src/lib/proxmox/vnc-proxy.ts"
