@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { NodeDetailResponse, StatusApiResponse, NodeService } from '../../topology/types';
 import { NodeEditForm, ServiceRow, AddServiceForm, MiniLatencyChart } from '@/src/components/shared/NodeDetail';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 
 interface NodeDetailPanelProps {
   workspaceId: number;
@@ -56,7 +57,7 @@ export function NodeDetailPanel({
     try {
       const res = await fetch(
         `/api/workspaces/${workspaceId}/nodes/${selectedNodeId}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: getCsrfHeaders() }
       );
       if (!res.ok) throw new Error('Gagal menghapus node');
       onNodeDeleted();

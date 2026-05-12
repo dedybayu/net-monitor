@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { NodeDetailResponse, StatusApiResponse, NodeService } from '../types';
 
 import { NodeEditForm, ServiceRow, AddServiceForm, MiniLatencyChart } from '@/src/components/shared/NodeDetail';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface NodeDetailModalProps {
@@ -60,7 +61,7 @@ export function NodeDetailModal({
     try {
       const res = await fetch(
         `/api/workspaces/${workspaceId}/nodes/${selectedNodeId}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: getCsrfHeaders() }
       );
       if (!res.ok) throw new Error('Gagal menghapus node');
       onNodeDeleted();

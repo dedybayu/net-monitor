@@ -3,6 +3,7 @@ import { NodeDetailResponse } from '@/src/app/(dashboard)/workspaces/[workspace_
 import { NodeForm } from './types';
 import { nodeToForm } from './utils';
 import { ErrorBanner } from './ErrorBanner';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 
 export function NodeEditForm({
   workspaceId,
@@ -33,7 +34,7 @@ export function NodeEditForm({
         `/api/workspaces/${workspaceId}/nodes/${nodeId}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getCsrfHeaders() },
           body: JSON.stringify({
             label: form.label,
             description: form.description,

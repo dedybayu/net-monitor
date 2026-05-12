@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ServiceForm, EMPTY_SERVICE_FORM } from './types';
 import { ServiceFormFields } from './ServiceFormFields';
 import { ErrorBanner } from './ErrorBanner';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 
 export function AddServiceForm({
   workspaceId, nodeId, nodeIp, onSuccess, onCancel,
@@ -24,7 +25,7 @@ export function AddServiceForm({
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/nodes/${nodeId}/services`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getCsrfHeaders() },
         body: JSON.stringify({
           name: form.name, description: form.description, ip: form.ip,
           method: form.method, port: form.method === 'TCP' ? form.port : undefined,

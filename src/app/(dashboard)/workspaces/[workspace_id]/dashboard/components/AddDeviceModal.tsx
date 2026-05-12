@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 
 interface NewNodeData {
   label: string;
@@ -38,7 +39,7 @@ export function AddDeviceModal({ workspaceId, onSuccess, onClose }: AddDeviceMod
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/nodes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getCsrfHeaders() },
         body: JSON.stringify({
           label: form.label,
           target: finalTarget,

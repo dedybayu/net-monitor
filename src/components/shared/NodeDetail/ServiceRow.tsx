@@ -5,6 +5,7 @@ import { svcToForm } from './utils';
 import { ErrorBanner } from './ErrorBanner';
 import { ServiceFormFields } from './ServiceFormFields';
 import { MiniLatencyChart } from './MiniLatencyChart';
+import { getCsrfHeaders } from '@/src/lib/csrf';
 
 export function ServiceRow({
   workspaceId,
@@ -47,7 +48,7 @@ export function ServiceRow({
         `/api/workspaces/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getCsrfHeaders() },
           body: JSON.stringify({
             name: form.name, description: form.description, ip: form.ip,
             method: form.method, port: form.method === 'TCP' ? form.port : undefined,
@@ -69,7 +70,7 @@ export function ServiceRow({
     try {
       const res = await fetch(
         `/api/workspaces/${workspaceId}/nodes/${nodeId}/services/${svc.node_service_id}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: getCsrfHeaders() }
       );
       if (!res.ok) throw new Error('Gagal menghapus service');
       onMutated();
