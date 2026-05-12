@@ -563,7 +563,7 @@ export function NodeDetailModal({
 
   const modalContent = (
     <div className="modal modal-open z-[9999]">
-      <div className="modal-box w-11/12 max-w-2xl border border-base-300 shadow-2xl bg-base-100 p-0 overflow-hidden">
+      <div className="modal-box w-11/12 max-w-6xl border border-base-300 shadow-2xl bg-base-100 p-0 overflow-hidden">
 
         {/* ── Header (view) ── */}
         {!isEditingNode && (
