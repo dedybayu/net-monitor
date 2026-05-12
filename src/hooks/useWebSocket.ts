@@ -71,8 +71,8 @@ export function useWebSocket({
         }
       };
 
-      ws.onerror = (err) => {
-        console.error('[WS] Error:', err);
+      ws.onerror = () => {
+        console.warn(`[WS] Connection error on ${url}. Will retry if reconnect is enabled.`);
       };
     } catch (err) {
       console.error('[WS] Connection failed:', err);

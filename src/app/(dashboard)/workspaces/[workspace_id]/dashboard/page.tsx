@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -12,8 +12,14 @@ import {
 import { 
     Activity, Server, Network, Clock, 
     CheckCircle, XCircle, ChevronRight, 
-    AlertTriangle, Zap, ShieldCheck
+    AlertTriangle, Zap, ShieldCheck, BarChart3, Plus
 } from 'lucide-react';
+import { AddDeviceModal } from './components/AddDeviceModal';
+import { useRouter } from 'next/navigation';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
 interface ApiError extends Error {
   status?: number;
@@ -47,13 +53,15 @@ export default function MonitorPage() {
   const workspace_id = params?.workspace_id as string;
   const workspaceIdInt = parseInt(workspace_id, 10);
   const [countdown, setCountdown] = useState<number>(3);
+  const [isAddingNode, setIsAddingNode] = useState(false);
+  const router = useRouter();
 
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
     workspaceIdInt ? `/api/workspaces/${workspaceIdInt}` : null,
     getFetcher
   );
 
-  const { data: devices } = useSWR<Device[]>(
+  const { data: devices, mutate: mutateDevices } = useSWR<Device[]>(
     wsData ? `/api/workspaces/${workspaceIdInt}/nodes` : null,
     getFetcher
   );
@@ -263,6 +271,9 @@ export default function MonitorPage() {
           </div>
         </div>
 
+        {/* ── LATENCY CHART ── */}
+        <LatencyChartSection workspaceId={workspaceIdInt} />
+
         {/* ── NODES LISTING ── */}
         <div className="space-y-6 pt-4">
           <div className="flex items-end justify-between border-b border-base-300 pb-4">
@@ -270,10 +281,26 @@ export default function MonitorPage() {
                   <Network size={24} className="text-primary" />
                   Monitored Devices
               </h2>
-              <span className="text-xs font-black opacity-30 tabular-nums uppercase tracking-widest">
-                  {devices?.length || 0} Targets
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-black opacity-30 tabular-nums uppercase tracking-widest hidden sm:inline-block">
+                    {devices?.length || 0} Targets
+                </span>
+                <button onClick={() => setIsAddingNode(true)} className="btn btn-primary btn-sm rounded-lg font-bold shadow-sm">
+                   <Plus size={16} /> Add Device
+                </button>
+              </div>
           </div>
+
+          {isAddingNode && (
+            <AddDeviceModal
+              workspaceId={workspaceIdInt}
+              onClose={() => setIsAddingNode(false)}
+              onSuccess={() => {
+                setIsAddingNode(false);
+                mutateDevices();
+              }}
+            />
+          )}
 
           {!devices || devices.length === 0 ? (
             <div className="flex flex-col items-center justify-center bg-base-100 rounded-[3rem] border-2 border-dashed border-base-300 p-16 text-center opacity-70">
@@ -301,57 +328,59 @@ export default function MonitorPage() {
                 }
 
                 return (
-                  <div
-                    key={device.id}
-                    className={`p-6 rounded-[2rem] border-none shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden bg-base-100 group ${
-                        isOnline ? 'hover:shadow-primary/10' : 'opacity-80'
-                    }`}
-                  >
-                    {/* Visual Pulse for Online */}
-                    {isOnline && (
-                        <div className="absolute top-0 left-0 w-1 h-full bg-success opacity-50"></div>
-                    )}
-                    
-                    <div className="flex items-center gap-5 z-10 w-full sm:w-auto">
-                      {/* Status Icon */}
-                      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner transition-colors ${
-                           isOnline ? 'bg-success/10 border-success/20 text-success' : 'bg-error/10 border-error/20 text-error'
-                      }`}>
-                          {isOnline ? <CheckCircle size={28} /> : <XCircle size={28} />}
-                      </div>
+                  <div key={device.id} className="flex flex-col">
+                    <div
+                      onClick={() => router.push(`/workspaces/${workspaceIdInt}/nodes/${device.id}`)}
+                      className={`p-6 rounded-[2rem] border-none shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden bg-base-100 group cursor-pointer ${
+                          isOnline ? 'hover:shadow-primary/10' : 'opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      {/* Visual Pulse for Online */}
+                      {isOnline && (
+                          <div className="absolute top-0 left-0 w-1 h-full bg-success opacity-50"></div>
+                      )}
+                      
+                      <div className="flex items-center gap-5 z-10 w-full sm:w-auto">
+                        {/* Status Icon */}
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner transition-colors ${
+                             isOnline ? 'bg-success/10 border-success/20 text-success' : 'bg-error/10 border-error/20 text-error'
+                        }`}>
+                            {isOnline ? <CheckCircle size={28} /> : <XCircle size={28} />}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <h3 className="font-black tracking-tight text-xl truncate group-hover:text-primary transition-colors leading-none">
-                            {device.name}
-                          </h3>
-                          <div className={`badge badge-sm uppercase tracking-widest text-[8px] font-black px-1.5 py-2 border-none ${isOnline? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
-                              {isOnline ? 'ONLINE' : 'OFFLINE'}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <h3 className="font-black tracking-tight text-xl truncate group-hover:text-primary transition-colors leading-none">
+                              {device.name}
+                            </h3>
+                            <div className={`badge badge-sm uppercase tracking-widest text-[8px] font-black px-1.5 py-2 border-none ${isOnline? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                                {isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] font-bold opacity-60 uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5 bg-base-200 px-2 py-1 rounded-md text-base-content/80 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px] sm:max-w-[200px]">
+                                {device.target}
+                            </span>
+                            <span className="flex items-center gap-1"><Activity size={12}/> Met: {device.method}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 text-[10px] font-bold opacity-60 uppercase tracking-widest">
-                          <span className="flex items-center gap-1.5 bg-base-200 px-2 py-1 rounded-md text-base-content/80 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px] sm:max-w-[200px]">
-                              {device.target}
-                          </span>
-                          <span className="flex items-center gap-1"><Activity size={12}/> Met: {device.method}</span>
-                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-base-200 pt-4 sm:pt-0">
-                        <div className="flex flex-col sm:items-end">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Response</span>
-                            {isOnline ? (
-                                <div className={`px-4 py-2 rounded-xl font-mono text-xl font-black leading-none border transition-colors ${latencyBgClass} ${latencyColorClass}`}>
-                                    {deviceData.latency}
-                                    <span className="text-[10px] ml-1 opacity-60">ms</span>
-                                </div>
-                            ) : (
-                                <div className="px-4 py-2 rounded-xl bg-error/10 text-error border border-error/20 font-mono text-xl font-black leading-none">
-                                    N/A
-                                </div>
-                            )}
-                        </div>
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-base-200 pt-4 sm:pt-0">
+                          <div className="flex flex-col sm:items-end">
+                              <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Response</span>
+                              {isOnline ? (
+                                  <div className={`px-4 py-2 rounded-xl font-mono text-xl font-black leading-none border transition-colors ${latencyBgClass} ${latencyColorClass}`}>
+                                      {deviceData.latency}
+                                      <span className="text-[10px] ml-1 opacity-60">ms</span>
+                                  </div>
+                              ) : (
+                                  <div className="px-4 py-2 rounded-xl bg-error/10 text-error border border-error/20 font-mono text-xl font-black leading-none">
+                                      N/A
+                                  </div>
+                              )}
+                          </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -360,6 +389,257 @@ export default function MonitorPage() {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+// ── LATENCY CHART SECTION ─────────────────────────────────────
+
+const latencyFetcher = (url: string) => fetch(url).then(r => r.json());
+
+function LatencyChartSection({ workspaceId }: { workspaceId: number }) {
+  const [timeRange, setTimeRange] = useState('15m');
+  const [selectedHosts, setSelectedHosts] = useState<string[]>([]);
+  const [availableHosts, setAvailableHosts] = useState<string[]>([]);
+
+  const refreshRate = (timeRange === '15m' || timeRange === '30m') ? 3000 : 60000;
+
+  const { data: rawData, isLoading: chartLoading, error: chartError } = useSWR(
+    `/api/monitoring/latency?workspace_id=${workspaceId}&range=${timeRange}`,
+    latencyFetcher,
+    { refreshInterval: refreshRate }
+  );
+
+  const chartData = useMemo(() => {
+    if (!rawData || rawData.error) return [];
+    return rawData.map((item: Record<string, unknown>) => ({
+      ...item,
+      formattedTime: new Date(item.time as string).toLocaleString('id-ID', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      })
+    }));
+  }, [rawData]);
+
+  // Discover hosts from data
+  useEffect(() => {
+    if (!chartData || chartData.length === 0) return;
+    const hosts = Array.from(
+      new Set(chartData.flatMap((d: Record<string, unknown>) => Object.keys(d)))
+    ).filter(key => key !== 'time' && key !== 'formattedTime') as string[];
+    const sorted = hosts.sort();
+
+    setAvailableHosts(prev => {
+      if (JSON.stringify(prev) !== JSON.stringify(sorted)) {
+        if (prev.length === 0) setSelectedHosts(sorted);
+        return sorted;
+      }
+      return prev;
+    });
+  }, [chartData]);
+
+  const toggleHost = useCallback((host: string) => {
+    setSelectedHosts(prev =>
+      prev.includes(host) ? prev.filter(h => h !== host) : [...prev, host]
+    );
+  }, []);
+
+  const getHostColor = useCallback((host: string) => {
+    const index = availableHosts.indexOf(host);
+    const hue = (index * (360 / Math.max(availableHosts.length, 5))) % 360;
+    return `hsl(${hue}, 70%, 60%)`;
+  }, [availableHosts]);
+
+  const intervalLabel = useMemo(() => {
+    switch(timeRange) {
+      case '15m': return '5s Avg';
+      case '30m': return '10s Avg';
+      case '1h': return '30s Avg';
+      case '1d': return '5m Avg';
+      case '3d': return '15m Avg';
+      case '7d': return '30m Avg';
+      case '14d': return '1h Avg';
+      default: return '5m Avg';
+    }
+  }, [timeRange]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-base-100/95 border border-base-300 backdrop-blur-md p-4 rounded-2xl shadow-2xl text-sm">
+          <p className="text-base-content/60 mb-2 font-medium border-b border-base-300 pb-2 text-xs">{payload[0].payload.formattedTime}</p>
+          {payload.map((entry: { color: string; name: string; value: number | null }, index: number) => (
+            <div key={`item-${index}`} className="flex items-center gap-2 py-0.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-base-content/50 text-xs">{entry.name}:</span>
+              <span className="font-bold text-base-content text-xs">
+                {entry.value != null ? `${entry.value.toFixed(2)} ms` : 'N/A'}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="bg-base-100 rounded-[2rem] border border-base-300 p-6 md:p-8 shadow-sm relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl -z-10 pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black tracking-tight">Performance Trend</h2>
+            <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest mt-0.5">
+              {intervalLabel} · {timeRange.replace('m', ' min').replace('d', ' days')}
+            </p>
+          </div>
+        </div>
+
+        {/* Time range selector */}
+        <div className="flex flex-wrap bg-base-200/50 p-1 rounded-xl border border-base-300 w-fit gap-1">
+          {[
+            { label: '15m', value: '15m' },
+            { label: '30m', value: '30m' },
+            { label: '1h', value: '1h' },
+            { label: '1d', value: '1d' },
+            { label: '3d', value: '3d' },
+            { label: '7d', value: '7d' },
+          ].map((range) => (
+            <button
+              key={range.value}
+              onClick={() => setTimeRange(range.value)}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                timeRange === range.value
+                  ? 'bg-primary text-primary-content shadow-md'
+                  : 'text-base-content/40 hover:text-base-content/80 hover:bg-base-300/50'
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Host Filters */}
+      {availableHosts.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {availableHosts.map((host) => {
+            const isSelected = selectedHosts.includes(host);
+            const color = getHostColor(host);
+            return (
+              <button
+                key={host}
+                onClick={() => toggleHost(host)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-2 ${
+                  isSelected
+                    ? 'bg-base-200 border-base-300 text-base-content shadow-sm'
+                    : 'bg-transparent border-base-300/50 text-base-content/30 hover:border-base-300'
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${!isSelected && 'grayscale opacity-30'}`}
+                  style={{ backgroundColor: color }}
+                />
+                {host}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Chart */}
+      <div className="h-[400px] w-full">
+        {chartLoading ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-primary">
+            <Activity className="animate-bounce mb-4" size={32} />
+            <p className="font-bold animate-pulse text-sm">Loading chart data...</p>
+          </div>
+        ) : chartError ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-error bg-error/5 rounded-2xl border border-error/20 p-8 text-center">
+            <AlertTriangle className="mb-4" size={48} />
+            <h3 className="text-lg font-black mb-2">Failed to load chart</h3>
+            <p className="text-error/80 text-sm">Pastikan worker berjalan dan InfluxDB aktif.</p>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-base-content/40 bg-base-200/30 rounded-2xl border border-base-300/30">
+            <Server className="mb-4 opacity-50" size={48} />
+            <p className="font-bold">No latency data available</p>
+            <p className="text-sm mt-2 opacity-60">Pastikan worker berjalan dan menulis data ke InfluxDB.</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                {availableHosts.map((host) => {
+                  const color = getHostColor(host);
+                  return (
+                    <linearGradient key={`grad-${host}`} id={`color-${host.replace(/[.:]/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0} />
+                    </linearGradient>
+                  );
+                })}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
+              <XAxis
+                dataKey="formattedTime"
+                stroke="currentColor"
+                opacity={0.4}
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                minTickGap={50}
+              />
+              <YAxis
+                stroke="currentColor"
+                opacity={0.4}
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value: number) => value % 1 === 0 ? `${value}ms` : `${value.toFixed(1)}ms`}
+                tickMargin={10}
+                width={55}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                verticalAlign="top"
+                height={36}
+                iconType="circle"
+                wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+              />
+              {availableHosts.map((host) => {
+                if (!selectedHosts.includes(host)) return null;
+                const color = getHostColor(host);
+                const gradientId = `url(#color-${host.replace(/[.:]/g, '-')})`;
+                return (
+                  <Area
+                    key={host}
+                    type="monotone"
+                    dataKey={host}
+                    name={host}
+                    stroke={color}
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill={gradientId}
+                    activeDot={{ r: 5, strokeWidth: 0, fill: color }}
+                    isAnimationActive={false}
+                    connectNulls={false}
+                  />
+                );
+              })}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
     </div>
   );
 }
