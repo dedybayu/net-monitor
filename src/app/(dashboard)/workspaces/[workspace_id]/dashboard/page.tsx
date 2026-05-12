@@ -12,8 +12,10 @@ import {
 import { 
     Activity, Server, Network, Clock, 
     CheckCircle, XCircle, ChevronRight, 
-    AlertTriangle, Zap, ShieldCheck, BarChart3
+    AlertTriangle, Zap, ShieldCheck, BarChart3, Plus
 } from 'lucide-react';
+import { AddDeviceModal } from './components/AddDeviceModal';
+import { useRouter } from 'next/navigation';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
@@ -51,13 +53,15 @@ export default function MonitorPage() {
   const workspace_id = params?.workspace_id as string;
   const workspaceIdInt = parseInt(workspace_id, 10);
   const [countdown, setCountdown] = useState<number>(3);
+  const [isAddingNode, setIsAddingNode] = useState(false);
+  const router = useRouter();
 
   const { data: wsData, error: wsError, isLoading: wsLoading } = useSWR(
     workspaceIdInt ? `/api/workspaces/${workspaceIdInt}` : null,
     getFetcher
   );
 
-  const { data: devices } = useSWR<Device[]>(
+  const { data: devices, mutate: mutateDevices } = useSWR<Device[]>(
     wsData ? `/api/workspaces/${workspaceIdInt}/nodes` : null,
     getFetcher
   );
@@ -277,10 +281,26 @@ export default function MonitorPage() {
                   <Network size={24} className="text-primary" />
                   Monitored Devices
               </h2>
-              <span className="text-xs font-black opacity-30 tabular-nums uppercase tracking-widest">
-                  {devices?.length || 0} Targets
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-black opacity-30 tabular-nums uppercase tracking-widest hidden sm:inline-block">
+                    {devices?.length || 0} Targets
+                </span>
+                <button onClick={() => setIsAddingNode(true)} className="btn btn-primary btn-sm rounded-lg font-bold shadow-sm">
+                   <Plus size={16} /> Add Device
+                </button>
+              </div>
           </div>
+
+          {isAddingNode && (
+            <AddDeviceModal
+              workspaceId={workspaceIdInt}
+              onClose={() => setIsAddingNode(false)}
+              onSuccess={() => {
+                setIsAddingNode(false);
+                mutateDevices();
+              }}
+            />
+          )}
 
           {!devices || devices.length === 0 ? (
             <div className="flex flex-col items-center justify-center bg-base-100 rounded-[3rem] border-2 border-dashed border-base-300 p-16 text-center opacity-70">
@@ -308,57 +328,59 @@ export default function MonitorPage() {
                 }
 
                 return (
-                  <div
-                    key={device.id}
-                    className={`p-6 rounded-[2rem] border-none shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden bg-base-100 group ${
-                        isOnline ? 'hover:shadow-primary/10' : 'opacity-80'
-                    }`}
-                  >
-                    {/* Visual Pulse for Online */}
-                    {isOnline && (
-                        <div className="absolute top-0 left-0 w-1 h-full bg-success opacity-50"></div>
-                    )}
-                    
-                    <div className="flex items-center gap-5 z-10 w-full sm:w-auto">
-                      {/* Status Icon */}
-                      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner transition-colors ${
-                           isOnline ? 'bg-success/10 border-success/20 text-success' : 'bg-error/10 border-error/20 text-error'
-                      }`}>
-                          {isOnline ? <CheckCircle size={28} /> : <XCircle size={28} />}
-                      </div>
+                  <div key={device.id} className="flex flex-col">
+                    <div
+                      onClick={() => router.push(`/workspaces/${workspaceIdInt}/nodes/${device.id}`)}
+                      className={`p-6 rounded-[2rem] border-none shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden bg-base-100 group cursor-pointer ${
+                          isOnline ? 'hover:shadow-primary/10' : 'opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      {/* Visual Pulse for Online */}
+                      {isOnline && (
+                          <div className="absolute top-0 left-0 w-1 h-full bg-success opacity-50"></div>
+                      )}
+                      
+                      <div className="flex items-center gap-5 z-10 w-full sm:w-auto">
+                        {/* Status Icon */}
+                        <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner transition-colors ${
+                             isOnline ? 'bg-success/10 border-success/20 text-success' : 'bg-error/10 border-error/20 text-error'
+                        }`}>
+                            {isOnline ? <CheckCircle size={28} /> : <XCircle size={28} />}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <h3 className="font-black tracking-tight text-xl truncate group-hover:text-primary transition-colors leading-none">
-                            {device.name}
-                          </h3>
-                          <div className={`badge badge-sm uppercase tracking-widest text-[8px] font-black px-1.5 py-2 border-none ${isOnline? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
-                              {isOnline ? 'ONLINE' : 'OFFLINE'}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <h3 className="font-black tracking-tight text-xl truncate group-hover:text-primary transition-colors leading-none">
+                              {device.name}
+                            </h3>
+                            <div className={`badge badge-sm uppercase tracking-widest text-[8px] font-black px-1.5 py-2 border-none ${isOnline? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
+                                {isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] font-bold opacity-60 uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5 bg-base-200 px-2 py-1 rounded-md text-base-content/80 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px] sm:max-w-[200px]">
+                                {device.target}
+                            </span>
+                            <span className="flex items-center gap-1"><Activity size={12}/> Met: {device.method}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 text-[10px] font-bold opacity-60 uppercase tracking-widest">
-                          <span className="flex items-center gap-1.5 bg-base-200 px-2 py-1 rounded-md text-base-content/80 overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px] sm:max-w-[200px]">
-                              {device.target}
-                          </span>
-                          <span className="flex items-center gap-1"><Activity size={12}/> Met: {device.method}</span>
-                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-base-200 pt-4 sm:pt-0">
-                        <div className="flex flex-col sm:items-end">
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Response</span>
-                            {isOnline ? (
-                                <div className={`px-4 py-2 rounded-xl font-mono text-xl font-black leading-none border transition-colors ${latencyBgClass} ${latencyColorClass}`}>
-                                    {deviceData.latency}
-                                    <span className="text-[10px] ml-1 opacity-60">ms</span>
-                                </div>
-                            ) : (
-                                <div className="px-4 py-2 rounded-xl bg-error/10 text-error border border-error/20 font-mono text-xl font-black leading-none">
-                                    N/A
-                                </div>
-                            )}
-                        </div>
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-base-200 pt-4 sm:pt-0">
+                          <div className="flex flex-col sm:items-end">
+                              <span className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Response</span>
+                              {isOnline ? (
+                                  <div className={`px-4 py-2 rounded-xl font-mono text-xl font-black leading-none border transition-colors ${latencyBgClass} ${latencyColorClass}`}>
+                                      {deviceData.latency}
+                                      <span className="text-[10px] ml-1 opacity-60">ms</span>
+                                  </div>
+                              ) : (
+                                  <div className="px-4 py-2 rounded-xl bg-error/10 text-error border border-error/20 font-mono text-xl font-black leading-none">
+                                      N/A
+                                  </div>
+                              )}
+                          </div>
+                      </div>
                     </div>
                   </div>
                 );
