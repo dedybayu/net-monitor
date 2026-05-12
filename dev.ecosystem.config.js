@@ -21,5 +21,14 @@ module.exports = {
         NODE_ENV: "development",
       },
     },
+    {
+      name: "net-monitor-vnc-dev",
+      script: "node_modules/.bin/tsx",
+      args: "--env-file=.env src/lib/proxmox/vnc-proxy.ts",
+      cwd: "./",
+      env: {
+        NODE_ENV: "development",
+      },
+    },
   ],
 };

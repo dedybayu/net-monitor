@@ -5,7 +5,7 @@
   "scripts": {
     "dev:next": "next dev --port 3090",
     "dev": "tsx server.ts",
-    "dev:all": "concurrently \"npm run dev\" \"node worker.js\"",
+    "dev:all": "concurrently \"npm run dev\" \"node worker.js\" \"npm run vnc-proxy\"",
     "dev:demo": "cross-env DEMO_MODE=true tsx server.ts",
     "build": "next build",
     "start": "cross-env NODE_ENV=production tsx server.ts",

@@ -406,38 +406,72 @@ function ServiceRow({
   }
 
   // ── View mode ──────────────────────────────────────────────────────────
+  const [isChartExpanded, setIsChartExpanded] = useState(false);
+
   return (
-    <div className={`group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${isOnline ? 'bg-success/5 border-success/20' : 'bg-error/5 border-error/20'
-      }`}>
-      <div className="flex items-center gap-4">
-        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-[10px] border transition-colors ${isOnline ? 'bg-success/10 text-success border-success/20' : 'bg-error/10 text-error border-error/20'
+    <div className="flex flex-col gap-2">
+      <div 
+        onClick={() => setIsChartExpanded(!isChartExpanded)}
+        className={`group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 cursor-pointer ${
+          isOnline 
+            ? 'bg-success/5 border-success/20 hover:bg-success/10' 
+            : 'bg-error/5 border-error/20 hover:bg-error/10'
+        } ${isChartExpanded ? 'ring-2 ring-primary/20 ring-offset-1 ring-offset-base-100' : ''}`}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-[10px] border transition-colors ${
+            isOnline ? 'bg-success/10 text-success border-success/20' : 'bg-error/10 text-error border-error/20'
           }`}>
-          {hasPort ? port : 'PING'}
-        </div>
-        <div className="flex flex-col">
-          <h4 className="text-sm font-bold opacity-90 leading-none">{svc.node_service_name}</h4>
-          <span className="text-[10px] font-mono font-medium opacity-60 bg-base-300/50 px-1.5 py-0.5 rounded mt-1.5">
-            {ip} ({hasPort ? 'TCP' : 'ICMP'})
-          </span>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex flex-col items-end gap-1">
-          <div className={`badge ${isOnline ? 'badge-success' : 'badge-error'} badge-xs font-black px-2 py-2`}>
-            {isOnline ? 'UP' : 'DOWN'}
+            {hasPort ? port : 'PING'}
           </div>
-          <span className={`text-[10px] font-mono font-bold ${isOnline ? 'text-success' : 'text-error'}`}>
-            {liveStatus?.latency || 'timeout'}
-          </span>
+          <div className="flex flex-col">
+            <h4 className="text-sm font-bold opacity-90 leading-none flex items-center gap-2">
+              {svc.node_service_name}
+              {isChartExpanded ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
+            </h4>
+            <span className="text-[10px] font-mono font-medium opacity-60 bg-base-300/50 px-1.5 py-0.5 rounded mt-1.5">
+              {ip} ({hasPort ? 'TCP' : 'ICMP'})
+            </span>
+          </div>
         </div>
-        <button onClick={() => setIsEditing(true)}
-          className="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
-          title="Edit service">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-1">
+            <div className={`badge ${isOnline ? 'badge-success' : 'badge-error'} badge-xs font-black px-2 py-2`}>
+              {isOnline ? 'UP' : 'DOWN'}
+            </div>
+            <span className={`text-[10px] font-mono font-bold ${isOnline ? 'text-success' : 'text-error'}`}>
+              {liveStatus?.latency || 'timeout'}
+            </span>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+            className="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+            title="Edit service">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {isChartExpanded && (
+        <div className="px-2 pb-2 animate-in slide-in-from-top-2 duration-300">
+          <MiniLatencyChart 
+            workspaceId={workspaceId}
+            nodeIp={svc.node_service_ip_address}
+            nodePort={svc.node_service_port}
+            nodeMethod={svc.node_service_method}
+            type="service"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -729,28 +763,28 @@ export function NodeDetailModal({
           <div className="flex justify-between items-center">
             {/* Delete node trigger */}
             <button
-              onClick={() => setDeleteNodeConfirm(true)}
-              disabled={deleteNodeConfirm || !nodeDetail}
-              className="btn btn-ghost btn-sm text-error hover:bg-error/10 gap-1.5 font-bold disabled:opacity-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Hapus Node
-            </button>
+                onClick={() => setDeleteNodeConfirm(true)}
+                disabled={deleteNodeConfirm || !nodeDetail}
+                className="btn btn-ghost btn-sm text-error hover:bg-error/10 gap-1.5 font-bold disabled:opacity-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Hapus Node
+              </button>
 
-            <button onClick={onClose} className="btn btn-primary rounded-xl px-10 font-bold uppercase text-xs">
-              Close Detail
-            </button>
+              <button onClick={onClose} className="btn btn-primary rounded-xl px-10 font-bold uppercase text-xs">
+                Close Detail
+              </button>
+            </div>
           </div>
         </div>
+        <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
-    </div>
-  );
+    );
 
-  if (!mounted) return null;
-  return createPortal(modalContent, document.body);
+    if (!mounted) return null;
+    return createPortal(modalContent, document.body);
 }
 
 // ── Mini Latency Chart for Node Detail ─────────────────────────────────────
@@ -762,113 +796,148 @@ function MiniLatencyChart({
   nodeIp,
   nodePort,
   nodeMethod,
+  type = 'node',
 }: {
   workspaceId: number;
   nodeIp: string;
   nodePort: number;
   nodeMethod: string;
+  type?: 'node' | 'service';
 }) {
+  const [range, setRange] = useState('15m');
   const host = nodeMethod === 'TCP' && nodePort > 0 ? `${nodeIp}:${nodePort}` : nodeIp;
 
+  const refreshInterval = range === '15m' || range === '30m' ? 5000 : 60000;
+
   const { data: rawData, isLoading } = useSWR(
-    `/api/monitoring/latency?workspace_id=${workspaceId}&host=${encodeURIComponent(host)}&range=15m`,
+    `/api/monitoring/latency?workspace_id=${workspaceId}&host=${encodeURIComponent(host)}&range=${range}&type=${type}`,
     latencyFetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval }
   );
 
   const chartData = useMemo(() => {
     if (!rawData || rawData.error) return [];
-    return rawData.map((item: Record<string, unknown>) => ({
-      ...item,
-      formattedTime: new Date(item.time as string).toLocaleString('id-ID', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      }),
-      value: item[host] ?? null,
-    }));
-  }, [rawData, host]);
+    return rawData.map((item: Record<string, unknown>) => {
+      const date = new Date(item.time as string);
+      let formattedTime = '';
+      
+      if (range === '15m' || range === '30m' || range === '1h') {
+        formattedTime = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } else {
+        formattedTime = date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
 
-  const color = 'oklch(var(--p))';
+      return {
+        ...item,
+        formattedTime,
+        value: item[host] ?? null,
+      };
+    });
+  }, [rawData, host, range]);
+
+  const blueColor = '#3b82f6'; // Tailwind blue-500
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const MiniTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length && payload[0].value != null) {
       return (
-        <div className="bg-base-100/95 border border-base-300 backdrop-blur-md px-3 py-2 rounded-xl shadow-xl text-xs">
-          <span className="font-bold">{payload[0].value.toFixed(2)} ms</span>
-          <span className="text-base-content/40 ml-2">{payload[0].payload.formattedTime}</span>
+        <div className="bg-base-100/95 border border-base-300 backdrop-blur-md px-3 py-2 rounded-xl shadow-xl text-[10px]">
+          <div className="flex flex-col">
+            <span className="font-black text-primary">{payload[0].value.toFixed(2)} ms</span>
+            <span className="text-base-content/40 mt-0.5">{payload[0].payload.formattedTime}</span>
+          </div>
         </div>
       );
     }
     return null;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-base-200 rounded-2xl p-4 border border-base-300 h-[160px] flex items-center justify-center">
-        <span className="loading loading-dots loading-sm opacity-30"></span>
-      </div>
-    );
-  }
-
-  if (!chartData || chartData.length === 0) {
-    return (
-      <div className="bg-base-200 rounded-2xl p-4 border border-base-300 h-[160px] flex flex-col items-center justify-center text-base-content/30">
-        <span className="text-[10px] font-bold uppercase tracking-widest">No chart data</span>
-        <span className="text-[9px] mt-1 opacity-60">Worker belum menulis data untuk node ini</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-base-200 rounded-2xl p-4 border border-base-300">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">
-          Latency Trend (15m)
-        </span>
-        <span className="text-[9px] font-mono opacity-30">{host}</span>
+    <div className="bg-base-200/50 rounded-2xl p-5 border border-base-300 shadow-inner">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black opacity-40 uppercase tracking-widest flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+            Latency Trend
+          </span>
+          <span className="text-[9px] font-mono opacity-30 mt-0.5">{host}</span>
+        </div>
+
+        {/* Range Selector */}
+        <div className="flex bg-base-300/50 p-0.5 rounded-lg border border-base-300 overflow-hidden">
+          {['15m', '1h', '1d', '3d', '7d'].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={`px-2 py-1 text-[9px] font-black transition-all ${
+                range === r 
+                  ? 'bg-blue-500 text-white rounded-md shadow-sm' 
+                  : 'text-base-content/40 hover:text-base-content/70'
+              }`}
+            >
+              {r.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="h-[140px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="miniGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.06)" vertical={false} />
-            <XAxis
-              dataKey="formattedTime"
-              stroke="oklch(var(--bc) / 0.2)"
-              fontSize={9}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={40}
-            />
-            <YAxis
-              stroke="oklch(var(--bc) / 0.2)"
-              fontSize={9}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v: number) => `${v}ms`}
-              width={40}
-            />
-            <Tooltip content={<MiniTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="value"
-              name={host}
-              stroke={color}
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#miniGrad)"
-              activeDot={{ r: 4, strokeWidth: 0, fill: color }}
-              isAnimationActive={false}
-              connectNulls={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+
+      <div className="h-[180px] w-full relative">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-base-200/20 backdrop-blur-[1px] z-10 rounded-xl">
+            <span className="loading loading-spinner loading-xs text-blue-500"></span>
+          </div>
+        )}
+
+        {(!chartData || chartData.length === 0) && !isLoading ? (
+          <div className="h-full w-full flex flex-col items-center justify-center text-base-content/30 border-2 border-dashed border-base-300 rounded-xl bg-base-300/20">
+            <span className="text-[10px] font-bold uppercase tracking-widest">No data available</span>
+            <span className="text-[8px] mt-1 opacity-60">Try a larger range or check worker status</span>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="miniGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={blueColor} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={blueColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.05)" vertical={false} />
+              <XAxis
+                dataKey="formattedTime"
+                stroke="oklch(var(--bc) / 0.2)"
+                fontSize={8}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={30}
+                tickMargin={8}
+              />
+              <YAxis
+                stroke="oklch(var(--bc) / 0.2)"
+                fontSize={8}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => `${v}ms`}
+                width={35}
+                tickMargin={5}
+              />
+              <Tooltip content={<MiniTooltip />} cursor={{ stroke: blueColor, strokeWidth: 1, strokeDasharray: '3 3' }} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                name={host}
+                stroke={blueColor}
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#miniGrad)"
+                activeDot={{ r: 3, strokeWidth: 0, fill: blueColor }}
+                isAnimationActive={false}
+                connectNulls={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
-}
+}
