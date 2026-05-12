@@ -1,8 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import useSWR from 'swr';
 import { NodeDetailResponse, StatusApiResponse, NodeService } from '../types';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
+} from 'recharts';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -630,6 +635,16 @@ export function NodeDetailModal({
             </div>
           </div>
 
+          {/* Mini Latency Chart */}
+          {nodeDetail && (
+            <MiniLatencyChart
+              workspaceId={workspaceId}
+              nodeIp={nodeDetail.node_ip_address}
+              nodePort={nodeDetail.node_port}
+              nodeMethod={nodeDetail.node_method}
+            />
+          )}
+
           {/* Services section */}
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -736,4 +751,124 @@ export function NodeDetailModal({
 
   if (!mounted) return null;
   return createPortal(modalContent, document.body);
+}
+
+// ── Mini Latency Chart for Node Detail ─────────────────────────────────────
+
+const latencyFetcher = (url: string) => fetch(url).then(r => r.json());
+
+function MiniLatencyChart({
+  workspaceId,
+  nodeIp,
+  nodePort,
+  nodeMethod,
+}: {
+  workspaceId: number;
+  nodeIp: string;
+  nodePort: number;
+  nodeMethod: string;
+}) {
+  const host = nodeMethod === 'TCP' && nodePort > 0 ? `${nodeIp}:${nodePort}` : nodeIp;
+
+  const { data: rawData, isLoading } = useSWR(
+    `/api/monitoring/latency?workspace_id=${workspaceId}&host=${encodeURIComponent(host)}&range=15m`,
+    latencyFetcher,
+    { refreshInterval: 5000 }
+  );
+
+  const chartData = useMemo(() => {
+    if (!rawData || rawData.error) return [];
+    return rawData.map((item: Record<string, unknown>) => ({
+      ...item,
+      formattedTime: new Date(item.time as string).toLocaleString('id-ID', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }),
+      value: item[host] ?? null,
+    }));
+  }, [rawData, host]);
+
+  const color = 'oklch(var(--p))';
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const MiniTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length && payload[0].value != null) {
+      return (
+        <div className="bg-base-100/95 border border-base-300 backdrop-blur-md px-3 py-2 rounded-xl shadow-xl text-xs">
+          <span className="font-bold">{payload[0].value.toFixed(2)} ms</span>
+          <span className="text-base-content/40 ml-2">{payload[0].payload.formattedTime}</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-base-200 rounded-2xl p-4 border border-base-300 h-[160px] flex items-center justify-center">
+        <span className="loading loading-dots loading-sm opacity-30"></span>
+      </div>
+    );
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="bg-base-200 rounded-2xl p-4 border border-base-300 h-[160px] flex flex-col items-center justify-center text-base-content/30">
+        <span className="text-[10px] font-bold uppercase tracking-widest">No chart data</span>
+        <span className="text-[9px] mt-1 opacity-60">Worker belum menulis data untuk node ini</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-base-200 rounded-2xl p-4 border border-base-300">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">
+          Latency Trend (15m)
+        </span>
+        <span className="text-[9px] font-mono opacity-30">{host}</span>
+      </div>
+      <div className="h-[140px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="miniGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.06)" vertical={false} />
+            <XAxis
+              dataKey="formattedTime"
+              stroke="oklch(var(--bc) / 0.2)"
+              fontSize={9}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              stroke="oklch(var(--bc) / 0.2)"
+              fontSize={9}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v: number) => `${v}ms`}
+              width={40}
+            />
+            <Tooltip content={<MiniTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              name={host}
+              stroke={color}
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#miniGrad)"
+              activeDot={{ r: 4, strokeWidth: 0, fill: color }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
