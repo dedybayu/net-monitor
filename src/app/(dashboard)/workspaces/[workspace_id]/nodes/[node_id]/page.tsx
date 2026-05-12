@@ -231,7 +231,7 @@ export default function NodeDetailPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-3 max-h-72 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-3 max-h-xl overflow-y-auto pr-1">
                   {isDetailLoading ? (
                     <div className="flex justify-center p-10">
                       <span className="loading loading-dots loading-md opacity-20"></span>
