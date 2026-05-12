@@ -588,10 +588,11 @@ function LatencyChartSection({ workspaceId }: { workspaceId: number }) {
                   );
                 })}
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.1)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
               <XAxis
                 dataKey="formattedTime"
-                stroke="oklch(var(--bc) / 0.3)"
+                stroke="currentColor"
+                opacity={0.4}
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
@@ -599,7 +600,8 @@ function LatencyChartSection({ workspaceId }: { workspaceId: number }) {
                 minTickGap={50}
               />
               <YAxis
-                stroke="oklch(var(--bc) / 0.3)"
+                stroke="currentColor"
+                opacity={0.4}
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}

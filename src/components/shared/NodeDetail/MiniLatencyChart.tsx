@@ -119,10 +119,11 @@ export function MiniLatencyChart({
                   <stop offset="95%" stopColor={blueColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--bc) / 0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.05} vertical={false} />
               <XAxis
                 dataKey="formattedTime"
-                stroke="oklch(var(--bc) / 0.2)"
+                stroke="currentColor"
+                opacity={0.4}
                 fontSize={8}
                 tickLine={false}
                 axisLine={false}
@@ -130,7 +131,8 @@ export function MiniLatencyChart({
                 tickMargin={8}
               />
               <YAxis
-                stroke="oklch(var(--bc) / 0.2)"
+                stroke="currentColor"
+                opacity={0.4}
                 fontSize={8}
                 tickLine={false}
                 axisLine={false}
