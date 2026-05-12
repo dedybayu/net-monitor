@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     let startRange = '-15m';
 
     switch (range) {
-        case '15m': interval = '5s'; startRange = '-15m'; break;
+        case '15m': interval = '3s'; startRange = '-15m'; break;
         case '30m': interval = '10s'; startRange = '-30m'; break;
         case '1h':  interval = '30s'; startRange = '-1h'; break;
         case '1d':  interval = '5m'; startRange = '-1d'; break;

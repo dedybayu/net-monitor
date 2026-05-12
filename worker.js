@@ -20,7 +20,7 @@ const INFLUX_BUCKET = process.env.INFLUX_BUCKET;
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ── Intervals ──────────────────────────────────────────────
-const PING_INTERVAL_MS = 5000;       // Ping every 5 seconds
+const PING_INTERVAL_MS = 3000;       // Ping every 3 seconds
 const DB_REFRESH_INTERVAL_MS = 30000; // Refresh target list every 30 seconds
 
 // ── Validation ─────────────────────────────────────────────

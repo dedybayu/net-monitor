@@ -402,7 +402,7 @@ function LatencyChartSection({ workspaceId }: { workspaceId: number }) {
   const [selectedHosts, setSelectedHosts] = useState<string[]>([]);
   const [availableHosts, setAvailableHosts] = useState<string[]>([]);
 
-  const refreshRate = (timeRange === '15m' || timeRange === '30m') ? 5000 : 60000;
+  const refreshRate = (timeRange === '15m' || timeRange === '30m') ? 3000 : 60000;
 
   const { data: rawData, isLoading: chartLoading, error: chartError } = useSWR(
     `/api/monitoring/latency?workspace_id=${workspaceId}&range=${timeRange}`,

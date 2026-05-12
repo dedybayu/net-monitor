@@ -584,7 +584,7 @@ function MiniLatencyChart({
   const [range, setRange] = useState('15m');
   const host = nodeMethod === 'TCP' && nodePort > 0 ? `${nodeIp}:${nodePort}` : nodeIp;
 
-  const refreshInterval = range === '15m' || range === '30m' ? 5000 : 60000;
+  const refreshInterval = range === '15m' || range === '30m' ? 3000 : 60000;
 
   const { data: rawData, isLoading } = useSWR(
     `/api/monitoring/latency?workspace_id=${workspaceId}&host=${encodeURIComponent(host)}&range=${range}&type=${type}`,
