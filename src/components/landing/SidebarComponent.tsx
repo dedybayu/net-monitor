@@ -13,6 +13,13 @@ export interface MenuItem {
   icon: ReactNode;
 }
 
+interface UserInfo {
+  name: string;
+  email: string;
+  role: string;
+  role_name: string;
+}
+
 export default function SidebarComponent({ menuItems }: { menuItems: MenuItem[] }) {
   const pathname = usePathname()
   const isLoginPage = pathname === "/login"
@@ -139,8 +146,8 @@ export default function SidebarComponent({ menuItems }: { menuItems: MenuItem[] 
                   <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-base-100"></span>
                 </div>
                 <div className="flex flex-col min-w-0 pr-2">
-                  <span className="text-sm font-black leading-none tracking-tight truncate">Dedy Bayu</span>
-                  <span className="text-[10px] font-bold text-base-content/40 mt-1 uppercase tracking-widest truncate">Administrator</span>
+                  <span className="text-sm font-black leading-none tracking-tight truncate">{session?.user?.name}</span>
+                  <span className="text-[10px] font-bold text-base-content/40 mt-1 uppercase tracking-widest truncate">{(session?.user as UserInfo)?.role_name}</span>
                 </div>
               </div>
               <button
@@ -195,8 +202,8 @@ export default function SidebarComponent({ menuItems }: { menuItems: MenuItem[] 
               </div>
               <ul tabIndex={0} className="mt-4 p-2 shadow-2xl menu menu-sm dropdown-content bg-base-100 border border-base-200 rounded-[1.5rem] w-52 z-50">
                 <li className="px-4 py-3 border-b border-base-200/50 mb-1">
-                  <span className="font-black tracking-tight text-sm text-base-content block leading-none">Dedy Bayu</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 mt-1">Admin</span>
+                  <span className="font-black tracking-tight text-sm text-base-content block leading-none">{session?.user?.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 mt-1">{(session?.user as UserInfo)?.role_name}</span>
                 </li>
                 <li>
                   <Link href="/profile" className="font-semibold px-4 py-2 hover:bg-base-200">
