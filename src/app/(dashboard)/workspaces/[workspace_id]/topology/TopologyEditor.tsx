@@ -140,6 +140,21 @@ function TopologyEditorInner(props: {
 
   const progressValue = (secondsLeft / REFRESH_INTERVAL) * 100;
 
+  // Shortcut Ctrl + S to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasChanges && !isSaving) {
+          handleSave();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasChanges, isSaving, handleSave]);
+
   return (
     /*
       Menggunakan fixed positioning yang memperhitungkan:
@@ -286,7 +301,9 @@ function TopologyEditorInner(props: {
       <footer className="bg-base-100 p-1.5 border-t border-base-300 flex justify-center gap-6 text-[8px] font-bold opacity-40 uppercase tracking-widest z-20">
         <span>🖱️ Drag to Move</span>
         <span>🔗 Connect Dots</span>
-        <span>💾 Save Configuration</span>
+        <span className={hasChanges ? "text-primary opacity-100 animate-pulse" : ""}>
+          💾 Ctrl+S to Save
+        </span>
       </footer>
     </div>
   );
