@@ -306,7 +306,7 @@ export default function VMDetailPage({
   const isRunning = data.status === "running";
 
   return (
-    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all cursor-default pb-20">
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-16 transition-all cursor-default pb-20">
       <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8">
 
         {/* ── Header ── */}
@@ -349,44 +349,44 @@ export default function VMDetailPage({
             </div>
 
             {/* Top action buttons */}
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 bg-base-100 p-1.5 rounded-3xl border border-base-300 shadow-sm mr-2">
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 bg-base-100 p-2 md:p-1.5 rounded-2xl md:rounded-3xl border border-base-300 shadow-sm mr-2">
                     <button 
                         onClick={handleOpenConsole}
                         disabled={!proxmoxHost || data.status !== "running"}
-                        className="btn btn-primary rounded-2xl font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-primary/20 border-none gap-2"
+                        className="btn btn-primary rounded-xl md:rounded-2xl font-black tracking-widest uppercase text-[9px] md:text-[10px] px-4 md:px-6 shadow-sm shadow-primary/20 border-none gap-2"
                     >
                         {proxmoxHost ? <Terminal size={14}/> : <span className="loading loading-spinner loading-xs"></span>}
                         Console
                     </button>
                     {data.status === "stopped" ? (
-                      <button onClick={() => handlePowerAction("start", "Power On")} disabled={actionLoading} className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
+                      <button onClick={() => handlePowerAction("start", "Power On")} disabled={actionLoading} className="btn rounded-xl md:rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[9px] md:text-[10px] px-4 md:px-6 shadow-sm shadow-success/20 border-none">
                         {actionLoading ? <span className="loading loading-spinner loading-xs mr-1"></span> : <Play size={14} className="mr-1"/>} Power On
                       </button>
                     ) : data.qmpstatus === "paused" ? (
                       <>
-                        <button onClick={() => handlePowerAction("resume", "Resume")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                        <button onClick={() => handlePowerAction("resume", "Resume")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 text-white shadow-sm shadow-info/20 border-none">
                           {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <PlayCircle size={14}/>} Resume
                         </button>
-                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 text-white shadow-sm shadow-error/20 border-none">
                           <Zap size={14}/> Stop
                         </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => handlePowerAction("suspend", "Suspend")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-info/20 border-none">
+                        <button onClick={() => handlePowerAction("suspend", "Suspend")} disabled={actionLoading} className="btn btn-info gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 text-white shadow-sm shadow-info/20 border-none">
                           {actionLoading ? <span className="loading loading-spinner loading-xs"></span> : <Pause size={14}/>} Suspend
                         </button>
-                        <button onClick={() => handlePowerAction("reboot", "Reboot")} disabled={actionLoading} className="btn btn-warning gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
+                        <button onClick={() => handlePowerAction("reboot", "Reboot")} disabled={actionLoading} className="btn btn-warning gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 text-warning-content shadow-sm shadow-warning/20 border-none">
                           <RotateCcw size={14}/> Reboot
                         </button>
-                        <button onClick={() => handlePowerAction("reset", "Reset")} disabled={actionLoading} className="btn bg-error/10 hover:bg-error/20 text-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                        <button onClick={() => handlePowerAction("reset", "Reset")} disabled={actionLoading} className="btn bg-error/10 hover:bg-error/20 text-error gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 border-none shadow-sm">
                           <RefreshCcw size={14}/> Reset
                         </button>
-                        <button onClick={() => handlePowerAction("shutdown", "Shutdown")} disabled={actionLoading} className="btn bg-base-200 hover:bg-base-300 text-base-content gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 border-none shadow-sm">
+                        <button onClick={() => handlePowerAction("shutdown", "Shutdown")} disabled={actionLoading} className="btn bg-base-200 hover:bg-base-300 text-base-content gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 border-none shadow-sm">
                           <PowerOff size={14}/> Shutdown
                         </button>
-                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[10px] rounded-2xl px-5 text-white shadow-sm shadow-error/20 border-none">
+                        <button onClick={() => handlePowerAction("stop", "Stop")} disabled={actionLoading} className="btn btn-error gap-1 font-black tracking-widest text-[9px] md:text-[10px] rounded-xl md:rounded-2xl px-4 md:px-5 text-white shadow-sm shadow-error/20 border-none">
                           <Zap size={14}/> Stop
                         </button>
                       </>

@@ -47,7 +47,7 @@ export default function ProxmoxListPage() {
     }, [workspaceIdInt]);
 
     return (
-        <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-6">
+        <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-16">
             <div className="p-6 md:p-10 max-w-xxl mx-auto">
                 {/* ── PAGE HEADER ── */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">

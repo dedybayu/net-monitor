@@ -22,6 +22,10 @@ export default function InfoPage() {
   }
 
   return (
-    <h1 className="text-2xl font-bold text-primary">USERS PAGE</h1>
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-16 transition-all">
+      <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
+        <h1 className="text-2xl font-bold text-primary">USERS PAGE</h1>
+      </div>
+    </div>
   );
 }

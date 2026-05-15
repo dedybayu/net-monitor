@@ -170,7 +170,7 @@ function TopologyEditorInner(props: {
       <div className="flex-grow relative bg-base-300/50">
 
         {/* ── FLOATING NAVBAR ─────────────────────────────────────────── */}
-        <div className="absolute top-18 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
+        <div className="absolute top-20 left-4 right-4 z-[10] flex justify-between items-center pointer-events-none">
           {/* Left Side */}
           <div className="flex items-center gap-1 bg-base-100/90 backdrop-blur-md p-3 px-5 rounded-2xl border border-base-300 shadow-2xl pointer-events-auto">
             <Link

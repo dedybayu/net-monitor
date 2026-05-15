@@ -58,7 +58,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-6">
+    <div className="min-h-screen z-1 bg-base-200 font-sans lg:pl-72 pt-16">
       <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
         {/* Header */}
       <DashboardHeader

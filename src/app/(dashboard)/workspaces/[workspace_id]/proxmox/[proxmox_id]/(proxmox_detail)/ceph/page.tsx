@@ -77,7 +77,7 @@ export default function CephDetailPage({ params }: { params: Promise<{ proxmox_i
   const usagePercent = pgmap.bytes_total ? (pgmap.bytes_used / pgmap.bytes_total) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-72 pt-6 transition-all pb-12">
+    <div className="min-h-screen bg-base-200 z-1 font-sans lg:pl-72 pt-16 transition-all pb-12">
       <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
         {/* ── HEADER ── */}
         <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">

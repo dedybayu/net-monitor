@@ -159,7 +159,7 @@ export default function NodeDetailPage() {
   const sortedCts = useMemo(() => getSortedItems(cts), [cts, getSortedItems]);
 
   return (
-    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all cursor-default pb-20">
+    <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-16 transition-all cursor-default pb-20">
       <div className="p-6 md:p-10 max-w-[1600px] mx-auto space-y-8">
         
         {/* ─── HEADER ─── */}

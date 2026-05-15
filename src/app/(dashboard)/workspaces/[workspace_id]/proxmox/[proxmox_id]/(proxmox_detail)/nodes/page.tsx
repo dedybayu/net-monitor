@@ -66,7 +66,7 @@ export default function NodesPage({ params }: { params: Promise<{ proxmox_id: st
     }
 
     return (
-        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-10 transition-all">
+        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-16 transition-all">
             <div className="p-6 md:p-10 max-w-xxl mx-auto">
                 {/* ── HEADER HALAMAN ── */}
                 <div className="mb-10">

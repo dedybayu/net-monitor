@@ -87,7 +87,7 @@ export default function SNMPPage() {
   const workspaceId = params.workspace_id as string;
 
   return (
-    <div className="min-h-screen bg-base-200 text-base-content font-sans pt-6 lg:pl-72">
+    <div className="min-h-screen bg-base-200 text-base-content font-sans pt-16 lg:pl-72">
       <div className="p-6 md:p-8 max-w-xxl mx-auto">
 
         {/* ── PAGE HEADER ── */}

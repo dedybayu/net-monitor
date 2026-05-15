@@ -44,7 +44,7 @@ export default function TopologyPage() {
   if (wsError) {
     const status = wsError.status;
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-base-200 text-center pt-16 lg:pl-72">
+      <div className="min-h-screen flex items-center justify-center p-16 bg-base-200 text-center pt-16 lg:pl-72">
         <div className="max-w-md">
           <div className="text-9xl font-black text-primary/20 mb-4">{status || '500'}</div>
           <h1 className="text-3xl font-bold mb-2">{wsError.message}</h1>

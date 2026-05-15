@@ -70,7 +70,7 @@ export default function RecentTasksPage({ params }: { params: Promise<{ proxmox_
     );
 
     return (
-        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-6 transition-all cursor-default">
+        <div className="min-h-screen z-1 bg-base-200 text-base-content font-sans lg:pl-72 pt-16 transition-all cursor-default">
             <div className="p-6 md:p-10 max-w-[1600px] mx-auto">
                 
                 {/* ── HEADER ── */}
