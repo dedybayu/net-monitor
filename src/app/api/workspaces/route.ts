@@ -82,7 +82,15 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(newWorkspace, { status: 201 });
+    const newUserWorkspace = await prisma.userWorkspace.create({
+      data: {
+        workspace_id: newWorkspace.workspace_id,
+        user_id: userId,
+        permision: "write",
+      },
+    });
+
+    return NextResponse.json({ newWorkspace, newUserWorkspace }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ message: "Error creating workspace" }, { status: 500 });
   }
