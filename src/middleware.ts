@@ -54,8 +54,8 @@ export default withAuth(
     }
 
     // 2. Jika mencoba akses dashboard tapi role-nya USR
-    if (pathname.startsWith("/dashboard") && role === "USR") {
-      const redirectRes = NextResponse.redirect(new URL("/info", req.url));
+    if (pathname.startsWith("/users") && role === "USR") {
+      const redirectRes = NextResponse.redirect(new URL("/dashboard", req.url));
       if (csrfToken) {
         redirectRes.cookies.set(csrfCookieName, csrfToken, {
           path: '/',
@@ -88,7 +88,7 @@ export default withAuth(
 export const config = {
   // Tambahkan endpoint yang perlu diproses
   matcher: [
-    // "/dashboard/:path*",
+    "/users/:path*",
     "/info/:path*",
     "/login", 
     "/register", 

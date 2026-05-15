@@ -10,7 +10,7 @@ interface UserInfo {
 
 export default function InfoPage() {
   const { data: session, status } = useSession();
-//   const router = useRouter();
+  //   const router = useRouter();
 
   // Loading state
   if (status === "loading") {
@@ -30,18 +30,18 @@ export default function InfoPage() {
               <span className="text-3xl">{session?.user?.name?.charAt(0)}</span>
             </div>
           </div>
-          
+
           <h2 className="card-title text-2xl font-bold text-error">Akses Terbatas</h2>
           <p className="text-base-content/70 mt-2">
             Halo, <span className="font-semibold text-base-content">{session?.user?.name}</span>.
           </p>
           <p className="text-sm">
-            Akun Anda terdaftar sebagai <span className="badge badge-ghost">{(session?.user as UserInfo)?.role}</span>. 
+            Akun Anda terdaftar sebagai <span className="badge badge-ghost">{(session?.user as UserInfo)?.role}</span>.
             Anda tidak memiliki izin untuk mengakses Dashboard utama.
           </p>
 
           <div className="card-actions mt-8 w-full">
-            <button 
+            <button
               onClick={() => signOut({ callbackUrl: '/' })}
               className="btn btn-error btn-outline w-full gap-2"
             >
@@ -51,7 +51,7 @@ export default function InfoPage() {
               Logout dari Sesi
             </button>
           </div>
-          
+
           <p className="text-[10px] text-base-content/40 mt-4 italic">
             Hubungi Administrator jika Anda memerlukan akses lebih tinggi.
           </p>

@@ -353,11 +353,11 @@ export default function VMDetailPage({
                 <div className="flex items-center gap-3 bg-base-100 p-1.5 rounded-3xl border border-base-300 shadow-sm mr-2">
                     <button 
                         onClick={handleOpenConsole}
-                        disabled={!proxmoxHost}
-                        className="btn btn-ghost hover:bg-base-200 btn-circle btn-sm text-base-content/40 hover:text-base-content tooltip tooltip-bottom"
-                        data-tip="Open Console"
+                        disabled={!proxmoxHost || data.status !== "running"}
+                        className="btn btn-primary rounded-2xl font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-primary/20 border-none gap-2"
                     >
-                        <Terminal size={14}/>
+                        {proxmoxHost ? <Terminal size={14}/> : <span className="loading loading-spinner loading-xs"></span>}
+                        Console
                     </button>
                     {data.status === "stopped" ? (
                       <button onClick={() => handlePowerAction("start", "Power On")} disabled={actionLoading} className="btn rounded-2xl btn-success text-white font-black tracking-widest uppercase text-[10px] px-6 shadow-sm shadow-success/20 border-none">
